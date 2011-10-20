@@ -9,9 +9,12 @@ import java.lang.System
 
 def init(host='localhost'):
   global vs, vs_svc, cvp, cvp_svc
-  java.lang.System.setProperty('NS_OPT',
-          '-ORBInitRef NameService=corbaloc:iiop:%s:2809/NameService'%host)
-  rtm.initCORBA()
+  if robotHost != None:
+    print 'robot host = '+robotHost
+    java.lang.System.setProperty('NS_OPT',
+        '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
+    rtm.initCORBA()
+
   vs = rtm.findRTC("VideoStream0")
   vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
   vs.start()
@@ -23,9 +26,11 @@ def init(host='localhost'):
   rtm.connectPorts(vs.port("MultiCameraImages"),   cvp.port("MultiCameraImage"))
 
 def loop():
+  vs_svc.take_one_frame()
+  time.sleep(2)
   while 1:
     vs_svc.take_one_frame()
-    time.sleep(1)
+    time.sleep(0.5)
 
 if __name__ == '__main__' or __name__ == 'main':
   if len(sys.argv) > 1:
