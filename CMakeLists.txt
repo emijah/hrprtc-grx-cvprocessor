@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
-#set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/ CACHE STRING "set path to cmake_modules")
-set(CMAKE_MODULE_PATH /opt/grx/share/hrpsys/cmake_modules/ CACHE STRING "set path to cmake_modules")
+if (NOT CMAKE_MODULE_PATH)
+  set(CMAKE_MODULE_PATH /opt/grx/share/hrpsys/cmake_modules/ CACHE STRING "set path to cmake_modules")
+endif()
 
 ####
 ## settings for OpenRTM and OpenHRP
