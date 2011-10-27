@@ -312,5 +312,5 @@ if __name__ == '__main__' or __name__ == 'main':
   init_gui()
   ### YY ###
   
-  loop()   
+#  loop()   
 
