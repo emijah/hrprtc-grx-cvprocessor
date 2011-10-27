@@ -14,6 +14,7 @@ from javax.swing.border import *
 from _SDOPackage import *
 
 
+# Slider Panel for 0 to 256
 class SliderPanel( JPanel, ChangeListener ):
 
   def __init__( self, rtc, conf_set_name, param_name, inival=128, minval=0, maxval=256 ):
@@ -68,6 +69,7 @@ class SliderPanel( JPanel, ChangeListener ):
       print 'Changed -> %s : %s = %s' % ( cs_name, pr_name, val_str )
 
 
+# Slider Panel for 0 to 1 (Percent 0 to 100)
 class SliderPanel_Percent( JPanel, ChangeListener ):
 
   def __init__( self, rtc, conf_set_name, param_name, inival=0.5, maxval=1 ):
