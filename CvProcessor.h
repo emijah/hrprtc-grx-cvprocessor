@@ -132,12 +132,21 @@ private:
     int m_S_max;
     int m_V_max;
 
+    // for HoughCircles
     int m_CircleRadius_min;
     int m_CircleRadius_max;
     int m_distance_min;
     int m_param1;
     int m_param2;
     float* m_point;
+
+    // for HoughLines
+    double m_lines_rho;
+    double m_lines_theta;
+    double m_lines_threshold;
+    double m_lines_min_length;
+    double m_lines_max_gap;
+    
 
 public:
     CvSeq* m_circles;

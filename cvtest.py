@@ -38,9 +38,10 @@ def loop():
   time.sleep(2)
   while 1:
     vs0_svc.take_one_frame()
-    time.sleep(2)
+    time.sleep(1)
     #cvp_svc.HoughCircles(ret)
     cvp_svc.HoughLinesP(iret)
+    #print iret.value
     if vs1 != None:
       vs1_svc.take_one_frame()
       time.sleep(2)
