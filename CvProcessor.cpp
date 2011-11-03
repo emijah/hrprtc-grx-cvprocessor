@@ -185,7 +185,6 @@ RTC::ReturnCode_t CvProcessor::onExecute(RTC::UniqueId ec_id)
         if (m_MultiCameraImage.error_code != 0) {
             return RTC::RTC_OK;
         }
-        HoughCircles();
     }
     return RTC::RTC_OK;
 }
@@ -225,6 +224,39 @@ void CvProcessor::HoughCircles()
     }
 }
 
+void CvProcessor::HoughLinesP()
+{
+    CvScalar hsv_min = cvScalar(m_H_min, m_S_min, m_V_min, 0);
+    CvScalar hsv_max = cvScalar(m_H_max, m_S_max, m_V_max, 0);
+
+    for (int i=0; i<m_MultiCameraImage.data.image_seq.length(); i++) {
+        Img::ImageData& idat = m_MultiCameraImage.data.image_seq[i].image;
+        if (m_frame == 0) {
+            m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+            m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+            m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
+        }
+        for (int row=0; row<idat.height; ++row) {
+            for (int col=0; col<idat.width; ++col) {
+                for (int k=0; k<3; ++k) {
+                    ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
+                        = idat.raw_data[(row * idat.width + col)*3+k];
+                }
+            }
+        }
+        cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
+        cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
+        cv::Mat mat(m_thresholded); 
+        cv::HoughLinesP(mat, m_lines, 3.14/180, 80, 30, 10);
+        for (int j=0; j<m_lines.size(); j++) {
+	    std::cout << m_lines[j][0] << std::endl;
+	    cv::line(mat, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
+        }
+        cvShowImage("src", m_frame);
+        cvShowImage("dst", m_thresholded);
+        char c = cvWaitKey(10);
+    }
+}
 /*
    RTC::ReturnCode_t CvProcessor::onAborting(RTC::UniqueId ec_id)
    {
