@@ -68,8 +68,13 @@ static const char* cvprocessor_spec[] =
     "conf.white.HoughCircles_radius_max", "200",
     "conf.white.HoughCircles_radius_min",  "20",
     //"conf.white.HoughCircles_minDist",   "200",
-    "conf.white.HoughCircles_Param1",    "100",
-    "conf.white.HoughCircles_Param2",    "40",
+    "conf.white.HoughCircles_Param1",     "100",
+    "conf.white.HoughCircles_Param2",      "40",
+    "conf.white.HoughLinssP_rho",           "1",
+    "conf.white.HoughLinesP_theta",         "1",
+    "conf.white.HoughLinesP_threshold",    "80",
+    "conf.white.HoughLinesP_min_length",   "30",
+    "conf.white.HoughLinesP_max_gap",      "10",
     ""
 };
 // </rtc-template>
@@ -134,6 +139,12 @@ RTC::ReturnCode_t CvProcessor::onInitialize()
     //bindParameter("HoughCircles_minDist",    m_distance_min,     "200");
     bindParameter("HoughCircles_Param1",     m_param1,           "100");
     bindParameter("HoughCircles_Param2",     m_param2,            "40");
+
+    bindParameter("HoughLinssP_rho", m_lines_rho,  "1");
+    bindParameter("HoughLinesP_theta", m_lines_theta, "1");
+    bindParameter("HoughLinesP_threshold", m_lines_threshold, "80");
+    bindParameter("HoughLinesP_min_line_length", m_lines_min_length, "30");
+    bindParameter("HoughLinesP_max_line_gap", m_lines_max_gap, "10");
 
     cvNamedWindow("src", CV_WINDOW_AUTOSIZE);
     cvNamedWindow("dst", CV_WINDOW_AUTOSIZE);
@@ -247,10 +258,12 @@ void CvProcessor::HoughLinesP()
         cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
         cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
         cv::Mat mat(m_thresholded); 
-        cv::HoughLinesP(mat, m_lines, 3.14/180, 80, 30, 10);
+        cv::Mat mat_frame(m_frame); 
+        //cv::HoughLinesP(mat, m_lines, 1, 1*3.14/180, 80, 30, 10);
+        cv::HoughLinesP(mat, m_lines, m_lines_rho, m_lines_theta*3.14/180, m_lines_threshold, m_lines_min_length, m_lines_max_gap);
         for (int j=0; j<m_lines.size(); j++) {
 	    std::cout << m_lines[j][0] << std::endl;
-	    cv::line(mat, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
+	    cv::line(mat_frame, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
         }
         cvShowImage("src", m_frame);
         cvShowImage("dst", m_thresholded);
