@@ -118,7 +118,6 @@ protected:
     // <rtc-template block="consumer_declare">
 
     // </rtc-template>
-    void HoughCircles();
 
 private:
     IplImage* m_frame;
@@ -142,6 +141,9 @@ private:
 
 public:
     CvSeq* m_circles;
+    std::vector<cv::Vec4i> m_lines;
+    void HoughCircles();
+    void HoughLinesP();
 };
 
 

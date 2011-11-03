@@ -38,6 +38,7 @@ public:
 
     // attributes and operations
     ::CORBA::ULong HoughCircles(OpenHRP::darray3Seq_out circles);
+    ::CORBA::ULong HoughLinesP(OpenHRP::iarray4Seq_out lines);
 
 private:
     CvProcessor* m_comp;
