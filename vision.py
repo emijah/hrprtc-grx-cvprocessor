@@ -92,6 +92,25 @@ def pickBall(dropDy):
   time.sleep(0.3)
   sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
 
+def tossTable():
+  # rotate & open & down
+  sample.moveRelativeL(dw=-1.57075, rate=40)
+  sample.lhandOpen60()
+  time.sleep(0.3)
+  sample.moveRelativeL(dz=-0.06, rate=10)
+
+  # grasp & up & down
+  sample.lhandClose()
+  time.sleep(0.3)
+  sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=10)
+  time.sleep(2)
+  sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=10)
+
+  # open & up & rotate
+  sample.lhandOpen60()
+  time.sleep(0.3)
+  sample.moveRelativeL(dz=0.06, rate=20)
+  sample.moveRelativeL(dw=1.57075, rate=40)
 
 def loop():
   count = 0
@@ -195,6 +214,7 @@ def loop():
       tossCount += 1
       if tossCount > 5:
         print "toss the table"
+        #tossTable()
         tossCount = 0
       
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
@@ -231,5 +251,4 @@ if __name__ == '__main__' or __name__ == 'main':
                             [],
                             []],
                             5)
-
   loop()   
