@@ -281,7 +281,7 @@ void CvProcessor::HoughLinesP()
         //cv::HoughLinesP(mat, m_lines, 1, 1*3.14/180, 80, 30, 10);
         cv::HoughLinesP(mat, m_lines, m_lines_rho, m_lines_theta*3.14/180, m_lines_threshold, m_lines_min_length, m_lines_max_gap);
         for (int j=0; j<m_lines.size(); j++) {
-	    std::cout << m_lines[j][0] << std::endl;
+	    //std::cout << m_lines[j][0] << std::endl;
 	    cv::line(mat_frame, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
         }
         cvShowImage("src", m_frame);
