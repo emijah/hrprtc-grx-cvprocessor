@@ -92,19 +92,54 @@ def pickBall(dropDy):
   time.sleep(0.3)
   sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
 
-def tossTable():
+def shuffleBalls():
   # rotate
   sample.moveRelativeL(dw=-1.57075, rate=40)
   
   # detect handle
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
-  sample.moveRelativeL(dx=-0.04, rate=10)
+  lines   = OpenHRP.iarray4SeqHolder()
+  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
+  okCount = 0
+  while 1:
+    cvp.ref.get_configuration().activate_configuration_set('green')
+    time.sleep(0.5)
+    vs_svc.take_one_frame()
+    time.sleep(2)
+    cvp_svc.HoughLinesP(lines)
+    if len(lines.value) > 0:
+      lx = 0.0
+      for l in lines.value:
+        lx += l[0]
+      lx = lx / len(lines.value) / 640.0 - 0.5 + 0.005
+  
+      dx = 0.0
+      # determine the control values
+      if abs(lx)   > 0.05:
+        dx = 0.01
+      elif abs(lx) > 0.03: # used to be 0.02 
+        dx = 0.002
+      else:
+        okCount += 1
+        if okCount > 3:
+          speak('detected the handle')
+          break
+      if lx > 0:
+        dx *= -1
+      print "x[0]=%6.3f x=%6.3f dx=%6.3f"%(lines.value[0][0], lx, dx)
 
-
+      x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+      if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
+        print "x limit"
+        speak('limited ecks movement')
+        dx = 0
+      sample.moveRelativeL(dx=dx, rate=10)
+    else:
+      speak('can not detect the handle')
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dz=-0.06, rate=10)
+  sample.moveRelativeL(dz=-0.1, rate=10)
 
   # grasp & up & down
   sample.lhandClose()
@@ -116,7 +151,7 @@ def tossTable():
   # open & up & rotate
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dz=0.06, rate=20)
+  sample.moveRelativeL(dz=0.1, rate=20)
   
   # move original position
   sample.moveL(x0, y0, z0, roll0, pitch0, yaw0)
@@ -126,7 +161,7 @@ def tossTable():
 
 def loop():
   count = 0
-  tossCount = 0
+  shuffleCount = 0
   sample.lhandOpen60()
   lastY = 0
   while 1:
@@ -143,20 +178,22 @@ def loop():
     time.sleep(0.5)
     cx_blue, cy_blue, r_blue = getCircles()
 
-    if cx_orange > cx_blue:
-      cy = cy_orange  
+    if cx_orange > cx_blue and r_orange > 0:
       cx = cx_orange  
+      cy = cy_orange  
       r  = r_orange  
       detectColor = 'orange'
-    else:
-      cy = cy_blue
+    elif r_blue > 0:
       cx = cx_blue
+      cy = cy_blue
       r  = r_blue
       detectColor = 'blue'
+    else:
+      r = 0
 
     if r > 0.00001: # circle found
       print detectColor
-      tossCount = 0
+      shuffleCount = 0
       cx = -cx + 0.5
       cy = -cy + 0.5
       dx = dy = dz = 0.0
@@ -212,23 +249,23 @@ def loop():
       count = 0;
       dx = dy = dz = 0
       
-      if x < 0.4:
-        dx = 0.02
+      #if x < 0.4:
+      #  dx = 0.02
 
-      if lastY + 0.03 < y:
-        dy = -0.02
-      elif y < lastY - 0.03:
-        dy = 0.02
+      #if lastY + 0.03 < y:
+      #  dy = -0.02
+      #elif y < lastY - 0.03:
+      #  dy = 0.02
 
       if z < z_upper_limit:
         dz = 0.02
 
-      tossCount += 1
-      if tossCount > 5:
-        print "toss the table"
-        speak('toss the table')
-        #tossTable()
-        tossCount = 0
+      shuffleCount += 1
+      if shuffleCount > 5:
+        print 'shuffling balls'
+        speak('shuffling balls')
+        shuffleBalls()
+        shuffleCount = 0
       
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
     if (x+dx<x_lower_limit and dx<0) or (x_upper_limit<x+dx and 0<dx):
@@ -239,10 +276,13 @@ def loop():
       print "y limit"
       speak('limited wai movement')
       dy = 0
-    if (z+dz<z_lower_limit and dz<0) or (z_upper_limit<z+dz and 0<dz):
+    if z+dz<z_lower_limit and dz<0:
       print "z limit"
       speak('limited zed movement')
       dz = 0
+    elif z_upper_limit<z+dz and 0<dz:
+      dz = 0
+
     sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0)
     if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0) < 0:
       print "ik error."
@@ -264,4 +304,5 @@ if __name__ == '__main__' or __name__ == 'main':
                             [],
                             []],
                             5)
+  #shuffleBalls()
   loop()   
