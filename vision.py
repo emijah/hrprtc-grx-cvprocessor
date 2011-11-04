@@ -12,10 +12,10 @@ import java.lang.System
 x_upper_limit =  0.6
 x_lower_limit =  0
 
-yL_upper_limit = 0.5
-yL_lower_limit =-0.1
+yL_upper_limit = 0.3
+yL_lower_limit =-0.05
 
-z_upper_limit  = 0.06+0.13
+z_upper_limit  = 0.06+0.118
 #z_lower_limit  = 0.11+0.065
 z_lower_limit  = 0.06+0.065
 
@@ -96,17 +96,22 @@ def shuffleBalls():
   # rotate
   sample.moveRelativeL(dw=-1.57075, rate=40)
   
-  # detect handle
+  # move to z_upper_limit
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
   lines   = OpenHRP.iarray4SeqHolder()
   print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
+  sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0)
+
+  # detect handle
   okCount = 0
+  searchDirec = -1
   while 1:
     vs_svc.take_one_frame()
     cvp.ref.get_configuration().activate_configuration_set('green')
     time.sleep(1)
     cvp_svc.HoughLinesP(lines)
     if len(lines.value) > 0:
+      ditectDelec = 0
       comX = comY = 0.0
       for pnt in lines.value:
         comX += pnt[0] + pnt[2]
@@ -137,19 +142,22 @@ def shuffleBalls():
           break
 
       print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
-
-      x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-      if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
-        print "x limit"
-        speak('limited ecks movement')
-        dx = 0
-      if (y1+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y1+dy and 0<dy):
-        print "y limit"
-        speak('limited wai movement')
-        dy = 0
-      sample.moveRelativeL(dx=dx, dy=dy, rate=10)
     else:
       speak('can not detect the handle')
+      dy = searchDirec * 0.03
+
+    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
+      print "x limit"
+      speak('limited ecks movement')
+      dx = 0
+    if (y1+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y1+dy and 0<dy):
+      print "y limit"
+      speak('limited wai movement')
+      dy = 0
+      if len(lines.value) == 0:
+        searchDirec *= -1
+    sample.moveRelativeL(dx=dx, dy=dy, rate=10)
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
@@ -266,7 +274,7 @@ def loop():
       #elif y < lastY - 0.03:
       #  dy = 0.02
 
-      if z < z_upper_limit:
+      if z + 0.02 < z_upper_limit:
         dz = 0.02
 
       shuffleCount += 1
