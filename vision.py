@@ -82,7 +82,12 @@ def getCircles():
 
 
 def pickBall(dropDy):
-  sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=10)
+  if sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=10) < 0:
+    print "ik error."
+    speak('eye kay error.')
+    speak('pull the tray.')
+    pullTray()
+    return False
   sample.lhandOpen30()
   time.sleep(0.3)
   sample.moveRelativeL(dz= 0.069, rate=70) # rate = 10
@@ -90,10 +95,17 @@ def pickBall(dropDy):
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
+  return True
+
+def pullTray():
+  moveTray('pull')
 
 def shuffleBalls():
+  moveTray('shuffle')
+
+def moveTray(mode = 'shuffle'):
   # rotate
-  sample.moveRelativeL(dw=-1.57075, rate=40)
+  sample.moveRelativeL(dy=0.035, dw=-1.57075, rate=40)
   
   # move to z_upper_limit
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
@@ -116,7 +128,7 @@ def shuffleBalls():
       for pnt in lines.value:
         comX += pnt[0] + pnt[2]
         comY += pnt[1] + pnt[3]
-      comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.005
+      comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.01
       comY = comY / 2.0 / len(lines.value) / 480.0 - 0.5 
   
       # determine the control values
@@ -163,12 +175,15 @@ def shuffleBalls():
   time.sleep(0.3)
   sample.moveRelativeL(dy=-0.035, dz=-0.1, rate=10)
 
-  # grasp & up & down
+  # grasp & do the action
   sample.lhandClose()
   time.sleep(0.3)
-  sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=10)
-  time.sleep(2)
-  sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=10)
+  if mode == 'pull':
+    sample.moveRelativeL(dx=-0.05, rate=10)
+  elif mode == 'shuffle':
+    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=10)
+    time.sleep(2)
+    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=10)
 
   # open & up & rotate
   sample.lhandOpen60()
@@ -224,21 +239,23 @@ def loop():
         dx *= -1
 
       if abs(cy)   > 0.05:
-        dy = 0.005
+        dy = 0.01
       elif abs(cy) > 0.03: # used to be 0.02
         dy = 0.002
       if cy < 0:
         dy *= -1
 
-      if   r < 0.12:
+      #if   r < 0.12:
+      #  dz = -0.01
+      #elif r < 0.15:
+        #dz = -0.003
+      if r < 0.15:
         dz = -0.01
-      elif r < 0.15:
-        dz = -0.003
       #      #  dz =  0.003
 
       # speak adjusting parameters
 
-      if dx == 0 and dy == 0 and dz == 0:
+      if dx == 0 and dy == 0 and (dz <= z_lower_limit or dz == 0):
         count += 1
       elif count > 1:
         count -= 1
@@ -297,11 +314,12 @@ def loop():
       speak('limited wai movement')
       dy = 0
     if z+dz<z_lower_limit and dz<0:
-      print "z limit"
-      speak('limited zed movement')
-      dz = 0
+      print "z lower limit"
+      #speak('limited zed movement')
+      dz = z_lower_limit - z
     elif z_upper_limit<z+dz and 0<dz:
-      dz = 0
+      print "z upper limit"
+      dz = z_upper_limit - z
 
     sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0)
     if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0) < 0:
