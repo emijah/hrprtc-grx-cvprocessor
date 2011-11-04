@@ -87,22 +87,18 @@ def pickBall(dropDy):
     print "ik error."
     speak('eye kay error.')
     speak('pull the tray.')
-    pullTray()
+    moveTray('pull')
     return False
-  sample.lhandOpen30()
-  time.sleep(0.3)
+  #sample.lhandOpen30()
+  for i in range(5):
+    sample.lhandOpen(50-i*5)
+    time.sleep(0.25)
   sample.moveRelativeL(dz= 0.069, rate=70) # rate = 10
   sample.moveRelativeL(dy= dropDy, rate=60) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
   return True
-
-def pullTray():
-  moveTray('pull')
-
-def shuffleBalls():
-  moveTray('shuffle')
 
 def moveTray(mode = 'shuffle'):
   # rotate
@@ -118,9 +114,9 @@ def moveTray(mode = 'shuffle'):
   okCount = 0
   searchDirec = -1
   while 1:
-    vs_svc.take_one_frame()
     cvp.ref.get_configuration().activate_configuration_set('green')
-    time.sleep(1)
+    vs_svc.take_one_frame()
+    time.sleep(0.1)
     cvp_svc.HoughLinesP(lines)
     dx = dy = 0.0
     if len(lines.value) > 0:
@@ -170,7 +166,7 @@ def moveTray(mode = 'shuffle'):
       dy = 0
       if len(lines.value) == 0:
         searchDirec *= -1
-    sample.moveRelativeL(dx=dx, dy=dy, rate=40)
+    sample.moveRelativeL(dx=dx, dy=dy, rate=50)
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
@@ -180,11 +176,19 @@ def moveTray(mode = 'shuffle'):
   sample.lhandClose()
   time.sleep(0.3)
   if mode == 'pull':
-    sample.moveRelativeL(dx=-0.05, rate=10)
+    #sample.moveRelativeL(dx=-0.05, rate=10)
+    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1)
   elif mode == 'shuffle':
+    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1)
+
     sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=5)
     time.sleep(2)
     sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=5)
+  elif mode == 'push':
+    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1)
 
   # open & up & rotate
   sample.lhandOpen60()
@@ -192,11 +196,14 @@ def moveTray(mode = 'shuffle'):
   sample.moveRelativeL(dz=0.1, rate=20)
   sample.moveRelativeL(dx=0.035,dw=1.57075, rate=40)
 
-def loop():
+def loop(numTry=1):
   count = 0
   shuffleCount = 0
   sample.lhandOpen60()
   lastY = 0
+  tryCount = 0
+  numOrange = 0
+  numBlue = 0
   while 1:
     x,y,z,roll,pitch,yaw = sample.getCurrentConfiguration(sample.armL_svc)
     print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z, roll, pitch, yaw)
@@ -260,10 +267,11 @@ def loop():
         if detectColor == 'orange':
           speak("Picking orange ball.")
           dropDy =  0.1
+          numOrange += 1
         else:
           dropDy = -0.1
           speak("Picking blue ball.")
-
+          numBlue += 1
         pickBall(dropDy)
         count = 0;
       else:
@@ -290,13 +298,21 @@ def loop():
 
       shuffleCount += 1
       if shuffleCount > 3:
+        tryCount += 1
+        if (numTry > 0) and (tryCount >= numTry):
+          print 'finished '
+          speak('I tried %s times'%(numTry))
+          speak('orange balls are %s '%(numOrange))
+          speak('blue balls are %s '%(numBlue))
+          return
         print 'shuffling balls'
         speak('shuffling balls')
-        shuffleBalls()
+        moveTray('shuffle')
         x2,y2,z2,yaw2,roll2,pitch2 = sample.getCurrentConfiguration(sample.armL_svc)
         x = x2
         y = y2
         shuffleCount = 0
+        numOrange = numBlue = 0
       
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
     if (x+dx<x_lower_limit and dx<0) or (x_upper_limit<x+dx and 0<dx):
@@ -328,13 +344,26 @@ if __name__ == '__main__' or __name__ == 'main':
   else:
     robotHost = None
 
+  speak('initializing system')
   init(robotHost)
-    
+  speak('servo on')
+  sample.servoOn(doConfirm=False) 
+  speak('moving to the initial pose for demonstration.')
   sample.setJointAnglesDeg([[0, 0, 65],
                             [-16,-19,-130,-43, 46, 0],
                             [-16, -20.0, -97, -17, 31, 7.6],
                             [],
                             []],
                             5)
-  shuffleBalls()
-  loop()   
+  moveTray('shuffle')
+  loop(1)   
+  moveTray('push')
+  speak('finished')
+  sample.goOffPose(wait=False)
+  sample.lhandClose()
+  sample.rhandClose()
+  mask = 31
+  wait = True
+  sample.seq_svc.isEmpty(mask, wait)
+  speak('servo off')
+  sample.servoOff(doConfirm=False)
