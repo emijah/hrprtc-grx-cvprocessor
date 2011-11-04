@@ -93,8 +93,15 @@ def pickBall(dropDy):
   sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
 
 def tossTable():
-  # rotate & open & down
+  # rotate
   sample.moveRelativeL(dw=-1.57075, rate=40)
+  
+  # detect handle
+  x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
+  sample.moveRelativeL(dx=-0.04, rate=10)
+
+
+  #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dz=-0.06, rate=10)
@@ -110,6 +117,11 @@ def tossTable():
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dz=0.06, rate=20)
+  
+  # move original position
+  sample.moveL(x0, y0, z0, roll0, pitch0, yaw0)
+
+  # rotate
   sample.moveRelativeL(dw=1.57075, rate=40)
 
 def loop():
@@ -214,6 +226,7 @@ def loop():
       tossCount += 1
       if tossCount > 5:
         print "toss the table"
+        speak('toss the table')
         #tossTable()
         tossCount = 0
       
