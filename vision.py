@@ -4,6 +4,7 @@ import sys
 import time
 import rtm
 import sample
+import types
 import Img.CameraCaptureServiceHelper
 import OpenHRP.CvProcessorServiceHelper
 import java.lang.System
@@ -14,8 +15,24 @@ x_lower_limit =  0
 yL_upper_limit = 0.5
 yL_lower_limit =-0.1
 
-z_upper_limit  = 0.3
-z_lower_limit  = 0.1
+z_upper_limit  = 0.06+0.13
+#z_lower_limit  = 0.11+0.065
+z_lower_limit  = 0.06+0.065
+
+ik_errorlog_filename = '/tmp/ikerror'
+
+def speak(s):
+  import os
+  if type(s) == types.StringType:
+    os.system('python speak.py "'+s+'"')
+  else:
+    print 'error(speak): input is not a string'
+
+def logIkErrorPos(x,y,z,r,p,w):
+  global ik_errorlog_filename
+  of = open(ik_errorlog_filename, 'a')
+  of.write('%f,%f,%f,%f,%f,%f\n'%(x,y,z,r,p,w))
+  of.close()
 
 def init(host='localhost'):
   global vs, vs_svc, cvp, cvp_svc
@@ -29,9 +46,11 @@ def init(host='localhost'):
   cvp.start()
 
   rtm.connectPorts(vs.port("MultiCameraImages"),   cvp.port("MultiCameraImage"))
+  vs_svc.take_one_frame()
+  time.sleep(1)
 
 def getCircles():
-  NUM_TO_TAKE=1
+  NUM_TO_TAKE=5
   x = 0
   y = 0
   r = 0
@@ -61,30 +80,67 @@ def getCircles():
 
   return x, y, r
 
+
+def pickBall(dropDy):
+  #sample.moveRelativeL(dx= 0.035, dz=-0.065, rate=10)
+  sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=10)
+  sample.lhandOpen30()
+  time.sleep(0.3)
+  sample.moveRelativeL(dz= 0.065, rate=70) # rate = 10
+  sample.moveRelativeL(dy= dropDy, rate=60) # rate = 10 
+  sample.lhandOpen60()
+  time.sleep(0.3)
+  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
+
+
 def loop():
   count = 0
+  tossCount = 0
+  sample.lhandOpen60()
+  lastY = 0
   while 1:
-    time.sleep(1)
     x,y,z,roll,pitch,yaw = sample.getCurrentConfiguration(sample.armL_svc)
-    print "\n( x, y, z) = %6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z)
+    print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z, roll, pitch, yaw)
 
-    cx, cy, r = getCircles()
-    if r > 0.00001: # circle founced
+    time.sleep(0.5) # added
+    cvp.ref.get_configuration().activate_configuration_set('orange')
+    time.sleep(0.5)
+    cx_orange, cy_orange, r_orange = getCircles()
+
+    time.sleep(0.5) # added
+    cvp.ref.get_configuration().activate_configuration_set('blue')
+    time.sleep(0.5)
+    cx_blue, cy_blue, r_blue = getCircles()
+
+    if cx_orange > cx_blue:
+      cy = cy_orange  
+      cx = cx_orange  
+      r  = r_orange  
+      detectColor = 'orange'
+    else:
+      cy = cy_blue
+      cx = cx_blue
+      r  = r_blue
+      detectColor = 'blue'
+
+    if r > 0.00001: # circle found
+      print detectColor
+      tossCount = 0
       cx = -cx + 0.5
       cy = -cy + 0.5
       dx = dy = dz = 0.0
 
-      # determin the control values
+      # determine the control values
       if abs(cx)   > 0.05:
         dx = 0.01
-      elif abs(cx) > 0.02:
+      elif abs(cx) > 0.03: # used to be 0.02 
         dx = 0.002
       if cx < 0:
         dx *= -1
 
       if abs(cy)   > 0.05:
-        dy = 0.01
-      elif abs(cy) > 0.02:
+        dy = 0.005
+      elif abs(cy) > 0.03: # used to be 0.02
         dy = 0.002
       if cy < 0:
         dy *= -1
@@ -93,6 +149,9 @@ def loop():
         dz = -0.01
       elif r < 0.15:
         dz = -0.003
+      #      #  dz =  0.003
+
+      # speak adjusting parameters
 
       if dx == 0 and dy == 0 and dz == 0:
         count += 1
@@ -101,13 +160,15 @@ def loop():
 
       if count > 2:
         # grasping
-        lastPoint = [x, y, z]
-        sample.moveRelativeL(dx= 0.035, dy= 0.000, dz=-0.065, rate=10)
-        sample.lhandOpen30()
-        sample.moveRelativeL(dx= 0.000, dy= 0.000, dz= 0.065, rate=10)
-        sample.moveRelativeL(dx= 0.000, dy= 0.100, dz= 0.000, rate=10)
-        sample.lhandOpen60()
-        sample.moveRelativeL(dx=-0.035, dy=-0.100, dz= 0.0,   rate=10)
+        lastY = y
+        if detectColor == 'orange':
+          speak("Picking orange ball.")
+          dropDy =  0.1
+        else:
+          dropDy = -0.1
+          speak("Picking blue ball.")
+
+        pickBall(dropDy)
         count = 0;
       else:
         #
@@ -123,29 +184,52 @@ def loop():
       if x < 0.4:
         dx = 0.02
 
-      if 0.05 < y:
+      if lastY + 0.03 < y:
         dy = -0.02
-      elif y < -0.05:
+      elif y < lastY - 0.03:
         dy = 0.02
 
       if z < z_upper_limit:
         dz = 0.02
-    
+
+      tossCount += 1
+      if tossCount > 5:
+        print "toss the table"
+        tossCount = 0
+      
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
-    if x+dx<x_lower_limit or x_upper_limit<x+dx:
+    if (x+dx<x_lower_limit and dx<0) or (x_upper_limit<x+dx and 0<dx):
+      print "x limit"
+      speak('limited ecks movement')
       dx = 0
-    if y+dy<yL_lower_limit or yL_upper_limit<y+dy:
+    if (y+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y+dy and 0<dy):
+      print "y limit"
+      speak('limited wai movement')
       dy = 0
-    if z+dz<z_lower_limit or z_upper_limit<z+dz:
+    if (z+dz<z_lower_limit and dz<0) or (z_upper_limit<z+dz and 0<dz):
+      print "z limit"
+      speak('limited zed movement')
       dz = 0
-    if not sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0):
+    sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0)
+    if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0) < 0:
       print "ik error."
+      speak('eye kay error.')
+      logIkErrorPos(x+dx, y+dy, z+dz,0,-1.57075,0)
+
 
 if __name__ == '__main__' or __name__ == 'main':
   if len(sys.argv) > 1:
     robotHost = sys.argv[1]
   else:
     robotHost = None
+
   init(robotHost)
-  cvp.ref.get_configuration().activate_configuration_set('orange')
+  
+  sample.setJointAnglesDeg([[0, 0, 65],
+                            [-16,-19,-130,-43, 46, 0],
+                            [-16, -20.0, -97, -17, 31, 7.6],
+                            [],
+                            []],
+                            5)
+
   loop()   
