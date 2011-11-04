@@ -39,7 +39,7 @@ def loop():
   while 1:
     vs0_svc.take_one_frame()
     time.sleep(1)
-    if 0:
+    if 1:
       cvp_svc.HoughCircles(circles)
     else:
       cvp_svc.HoughLinesP(lines)
