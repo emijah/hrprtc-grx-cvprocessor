@@ -102,44 +102,58 @@ def shuffleBalls():
   print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
   okCount = 0
   while 1:
-    cvp.ref.get_configuration().activate_configuration_set('green')
-    time.sleep(0.5)
     vs_svc.take_one_frame()
-    time.sleep(2)
+    cvp.ref.get_configuration().activate_configuration_set('green')
+    time.sleep(1)
     cvp_svc.HoughLinesP(lines)
     if len(lines.value) > 0:
-      lx = 0.0
-      for l in lines.value:
-        lx += l[0]
-      lx = lx / len(lines.value) / 640.0 - 0.5 + 0.005
+      comX = comY = 0.0
+      for pnt in lines.value:
+        comX += pnt[0] + pnt[2]
+        comY += pnt[1] + pnt[3]
+      comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.005
+      comY = comY / 2.0 / len(lines.value) / 480.0 - 0.5 
   
-      dx = 0.0
+      dx = dy = 0.0
       # determine the control values
-      if abs(lx)   > 0.05:
+      if abs(comX)   > 0.05:
         dx = 0.01
-      elif abs(lx) > 0.03: # used to be 0.02 
+      elif abs(comX) > 0.03: # used to be 0.02 
         dx = 0.002
-      else:
+      if comX > 0:
+        dx *= -1
+
+      if abs(comY)   > 0.05:
+        dy = 0.01
+      elif abs(comY) > 0.03: # used to be 0.02 
+        dy = 0.002
+      if comY < 0:
+        dy *= -1
+      
+      if dx == 0 and dy == 0:
         okCount += 1
         if okCount > 3:
           speak('detected the handle')
           break
-      if lx > 0:
-        dx *= -1
-      print "x[0]=%6.3f x=%6.3f dx=%6.3f"%(lines.value[0][0], lx, dx)
+
+      print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
 
       x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
       if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
         print "x limit"
         speak('limited ecks movement')
         dx = 0
-      sample.moveRelativeL(dx=dx, rate=10)
+      if (y1+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y1+dy and 0<dy):
+        print "y limit"
+        speak('limited wai movement')
+        dy = 0
+      sample.moveRelativeL(dx=dx, dy=dy, rate=10)
     else:
       speak('can not detect the handle')
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dz=-0.1, rate=10)
+  sample.moveRelativeL(dy=-0.035, dz=-0.1, rate=10)
 
   # grasp & up & down
   sample.lhandClose()
@@ -152,12 +166,7 @@ def shuffleBalls():
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dz=0.1, rate=20)
-  
-  # move original position
-  sample.moveL(x0, y0, z0, roll0, pitch0, yaw0)
-
-  # rotate
-  sample.moveRelativeL(dw=1.57075, rate=40)
+  sample.moveRelativeL(dx=0.035,dw=1.57075, rate=40)
 
 def loop():
   count = 0
@@ -261,10 +270,13 @@ def loop():
         dz = 0.02
 
       shuffleCount += 1
-      if shuffleCount > 5:
+      if shuffleCount > 3:
         print 'shuffling balls'
         speak('shuffling balls')
         shuffleBalls()
+        x2,y2,z2,yaw2,roll2,pitch2 = sample.getCurrentConfiguration(sample.armL_svc)
+        x = x2
+        y = y2
         shuffleCount = 0
       
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
@@ -297,12 +309,12 @@ if __name__ == '__main__' or __name__ == 'main':
     robotHost = None
 
   init(robotHost)
-  
+    
   sample.setJointAnglesDeg([[0, 0, 65],
                             [-16,-19,-130,-43, 46, 0],
                             [-16, -20.0, -97, -17, 31, 7.6],
                             [],
                             []],
                             5)
-  #shuffleBalls()
+  shuffleBalls()
   loop()   
