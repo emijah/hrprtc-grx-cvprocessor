@@ -49,8 +49,9 @@ def init(host='localhost'):
   vs_svc.take_one_frame()
   time.sleep(1)
 
-def getCircles():
-  NUM_TO_TAKE=5
+def getCircles(color = 'orange'):
+  NUM_TO_TAKE=1
+  cvp.ref.get_configuration().activate_configuration_set(color)
   x = 0
   y = 0
   r = 0
@@ -58,7 +59,7 @@ def getCircles():
   ret = OpenHRP.darray3SeqHolder()
   for i in range(NUM_TO_TAKE):
     vs_svc.take_one_frame()
-    time.sleep(0.1)    
+    time.sleep(0.1)
     cvp_svc.HoughCircles(ret)
     if len(ret.value) > 0:
       success_count += 1
@@ -169,7 +170,7 @@ def moveTray(mode = 'shuffle'):
       dy = 0
       if len(lines.value) == 0:
         searchDirec *= -1
-    sample.moveRelativeL(dx=dx, dy=dy, rate=10)
+    sample.moveRelativeL(dx=dx, dy=dy, rate=40)
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
@@ -181,9 +182,9 @@ def moveTray(mode = 'shuffle'):
   if mode == 'pull':
     sample.moveRelativeL(dx=-0.05, rate=10)
   elif mode == 'shuffle':
-    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=10)
+    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=5)
     time.sleep(2)
-    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=10)
+    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=5)
 
   # open & up & rotate
   sample.lhandOpen60()
@@ -200,15 +201,8 @@ def loop():
     x,y,z,roll,pitch,yaw = sample.getCurrentConfiguration(sample.armL_svc)
     print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z, roll, pitch, yaw)
 
-    time.sleep(0.5) # added
-    cvp.ref.get_configuration().activate_configuration_set('orange')
-    time.sleep(0.5)
-    cx_orange, cy_orange, r_orange = getCircles()
-
-    time.sleep(0.5) # added
-    cvp.ref.get_configuration().activate_configuration_set('blue')
-    time.sleep(0.5)
-    cx_blue, cy_blue, r_blue = getCircles()
+    cx_orange, cy_orange, r_orange = getCircles('orange')
+    cx_blue, cy_blue, r_blue = getCircles('blue')
 
     if cx_orange > cx_blue and r_orange > 0:
       cx = cx_orange  
