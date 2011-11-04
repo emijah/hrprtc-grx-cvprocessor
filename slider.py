@@ -231,7 +231,7 @@ def loop():
     vs_svc.take_one_frame()
 #    time.sleep(0.5)
     time.sleep(1) # ThinkPad X200
-    if 1:
+    if 0:
       circles = OpenHRP.darray3SeqHolder()
       cvp_svc.HoughCircles(circles)
     else:
