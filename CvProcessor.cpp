@@ -75,6 +75,23 @@ static const char* cvprocessor_spec[] =
     "conf.white.HoughLinesP_threshold",    "80",
     "conf.white.HoughLinesP_min_length",   "30",
     "conf.white.HoughLinesP_max_gap",      "10",
+    //
+    "conf.black.H_max", "256",
+    "conf.black.H_min", "0",
+    "conf.black.S_max", "256",
+    "conf.black.S_min", "0",
+    "conf.black.V_max", "255",
+    "conf.black.V_min", "100",
+    //"conf.black.HoughCircles_radius_max", "200",
+    //"conf.black.HoughCircles_radius_min",  "20",
+    //"conf.black.HoughCircles_minDist",   "200",
+    //"conf.black.HoughCircles_Param1",     "100",
+    //"conf.black.HoughCircles_Param2",      "40",
+    "conf.black.HoughLinssP_rho",           "1",
+    "conf.black.HoughLinesP_theta",         "1",
+    "conf.black.HoughLinesP_threshold",    "80",
+    "conf.black.HoughLinesP_min_length",   "30",
+    "conf.black.HoughLinesP_max_gap",      "10",
     ""
 };
 // </rtc-template>
