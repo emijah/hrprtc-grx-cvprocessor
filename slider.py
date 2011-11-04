@@ -230,8 +230,13 @@ def loop():
   while 1:
     vs_svc.take_one_frame()
 #    time.sleep(0.5)
-    time.sleep(2) # ThinkPad X200
-
+    time.sleep(1) # ThinkPad X200
+    if 1:
+      circles = OpenHRP.darray3SeqHolder()
+      cvp_svc.HoughCircles(circles)
+    else:
+      lines   = OpenHRP.iarray4SeqHolder()
+      cvp_svc.HoughLinesP(lines)
 
 #####
 # Data Conversion
@@ -312,5 +317,5 @@ if __name__ == '__main__' or __name__ == 'main':
   init_gui()
   ### YY ###
   
-#  loop()   
+  loop()   
 
