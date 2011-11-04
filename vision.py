@@ -82,11 +82,10 @@ def getCircles():
 
 
 def pickBall(dropDy):
-  #sample.moveRelativeL(dx= 0.035, dz=-0.065, rate=10)
   sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=10)
   sample.lhandOpen30()
   time.sleep(0.3)
-  sample.moveRelativeL(dz= 0.065, rate=70) # rate = 10
+  sample.moveRelativeL(dz= 0.069, rate=70) # rate = 10
   sample.moveRelativeL(dy= dropDy, rate=60) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
@@ -110,6 +109,7 @@ def shuffleBalls():
     cvp.ref.get_configuration().activate_configuration_set('green')
     time.sleep(1)
     cvp_svc.HoughLinesP(lines)
+    dx = dy = 0.0
     if len(lines.value) > 0:
       ditectDelec = 0
       comX = comY = 0.0
@@ -119,7 +119,6 @@ def shuffleBalls():
       comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.005
       comY = comY / 2.0 / len(lines.value) / 480.0 - 0.5 
   
-      dx = dy = 0.0
       # determine the control values
       if abs(comX)   > 0.05:
         dx = 0.01
@@ -143,8 +142,9 @@ def shuffleBalls():
 
       print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
     else:
-      speak('handle detection failed.')
+      speak('detecting handle.')
       dy = searchDirec * 0.03
+      okCount = 0
 
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
     if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
