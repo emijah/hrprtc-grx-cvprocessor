@@ -32,19 +32,20 @@ def init(host='localhost'):
 
 
 def loop():
-  ret = OpenHRP.darray3SeqHolder()
-  iret = OpenHRP.iarray4SeqHolder()
   vs0_svc.take_one_frame()
   time.sleep(2)
+  circles = OpenHRP.darray3SeqHolder()
+  lines   = OpenHRP.iarray4SeqHolder()
   while 1:
     vs0_svc.take_one_frame()
     time.sleep(1)
-    #cvp_svc.HoughCircles(ret)
-    cvp_svc.HoughLinesP(iret)
-    #print iret.value
+    if 0:
+      cvp_svc.HoughCircles(circles)
+    else:
+      cvp_svc.HoughLinesP(lines)
     if vs1 != None:
       vs1_svc.take_one_frame()
-      time.sleep(2)
+      time.sleep(1)
       cvp_svc.HoughCircles(ret)
 
 if __name__ == '__main__' or __name__ == 'main':
@@ -53,6 +54,5 @@ if __name__ == '__main__' or __name__ == 'main':
   else:
     robotHost = None
   init(robotHost)
-  cvp.ref.get_configuration().activate_configuration_set('orange')
   loop()   
 
