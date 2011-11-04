@@ -138,12 +138,12 @@ def shuffleBalls():
       if dx == 0 and dy == 0:
         okCount += 1
         if okCount > 3:
-          speak('detected the handle')
+          speak('handle detected.')
           break
 
       print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
     else:
-      speak('can not detect the handle')
+      speak('handle detection failed.')
       dy = searchDirec * 0.03
 
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
