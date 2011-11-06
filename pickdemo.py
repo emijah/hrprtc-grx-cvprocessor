@@ -9,19 +9,39 @@ import Img.CameraCaptureServiceHelper
 import OpenHRP.CvProcessorServiceHelper
 import java.lang.System
 
+import bodyinfo
+
+SimulationRun = True
+
 #############################
 #
 # Parameters
 #
-x_upper_limit =  0.2
-x_lower_limit =  0.3
+#base_offset_z = 0.11
+BASE_OFFSET_Z = 0.06
+HAND_LENGTH_Z = 0.103
+TRAY_HANDLE_Z = 0.080
+
+# the x,z displacement to shuffle tray in absolute value [m]
+DISPLACEMENT_X_TO_SHUFFLE_TRAY = 0.015
+DISPLACEMENT_Z_TO_SHUFFLE_TRAY = 0.060
+
+# the absolute position x to push/pull tray [m]
+POSITION_X_TO_PULL_TRAY = 0.13 # 0.20->0.15
+POSITION_X_TO_PUSH_TRAY = 0.20 # 0.35->0.20
+
+#x_upper_limit =  0.2
+#x_lower_limit =  0.3
+x_upper_limit =  0.1
+x_lower_limit =  0.1
 
 yL_upper_limit = 0.1
 yL_lower_limit =-0.05
 
-z_upper_limit  = 0.06+0.118
-#z_lower_limit  = 0.11+0.065
-z_lower_limit  = 0.06+0.065
+#z_upper_limit  = 0.06+0.118
+z_upper_limit  = BASE_OFFSET_Z + 0.100
+#z_lower_limit  = 0.06+0.065
+z_lower_limit  = HAND_LENGTH_Z - BASE_OFFSET_Z
 
 # number of pixels
 NUM_PIXELS_X=480
@@ -32,18 +52,13 @@ NUM_PIXELS_Y=640
 CAMERA_OFFSET_X=0.0    #for PARM
 
 # the z displacement to pick ball in absolute value [m]
-DISPLACEMENT_Z_TO_PICK_BALL=0.069
+#ABS_Z_TO_PICK_BALL = 0.069
+ABS_Z_TO_PICK_BALL = 0.030
 
 # the z displacement to pick tray in absolute value [m]
-DISPLACEMENT_Z_TO_PICK_TRAY = 0.100
+#DISPLACEMENT_Z_TO_PICK_TRAY = 0.1
+ABS_Z_TO_PICK_TRAY = HAND_LENGTH_Z - BASE_OFFSET_Z + TRAY_HANDLE_Z
 
-# the x,z displacement to shuffle tray in absolute value [m]
-DISPLACEMENT_X_TO_SHUFFLE_TRAY = 0.015
-DISPLACEMENT_Z_TO_SHUFFLE_TRAY = 0.060
-
-# the absolute position x to push/pull tray [m]
-POSITION_X_TO_PULL_TRAY = 0.35
-POSITION_X_TO_PUSH_TRAY = 0.42
 
 # contol value x for 5% diffence [m]
 CONTROL_VALUE_X_05 = 0.01
@@ -146,8 +161,9 @@ def getCircles(color = 'orange'):
 
 
 def pickBall(dropDy):
-  # hard coded coordinates
-  if sample.moveRelativeL(dx=CAMERA_OFFSET_X, dz=-DISPLACEMENT_Z_TO_PICK_BALL, rate=10) < 0:
+  x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
+  dzz = ABS_Z_TO_PICK_BALL - z0
+  if sample.moveRelativeL(dx=CAMERA_OFFSET_X, dz=dzz, rate=10) < 0:
     print "ik error."
     speak('eye kay error.')
     speak('pull the tray.')
@@ -157,31 +173,47 @@ def pickBall(dropDy):
   for i in range(5):
     sample.lhandOpen(50-i*5)
     time.sleep(0.25)
-  # hard coded coordinates
-  sample.moveRelativeL(dz= DISPLACEMENT_Z_TO_PICK_BALL, rate=70) # rate = 10
-  # hard coded coordinates
+  # return to original height
+  sample.moveRelativeL(dz= -dzz, rate=70) # rate = 10
+
   sample.moveRelativeL(dy= dropDy, rate=60) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
-  # hard coded coordinates
+
   sample.moveRelativeL(dx=-CAMERA_OFFSET_X, dy=-dropDy, rate=60)
   return True
 
 def moveTray(mode = 'shuffle'):
   # rotate
   # hard coded coordinates
-  sample.moveRelativeL(dy=CAMERA_OFFSET_X, dw=-1.57075, rate=40)
-  
+
+  if bodyinfo.modelName == 'PARM':
+    sample.setJointAnglesDeg([[0.0, 0.0, 0.0, -40.0, -140.0, -90.0],[]], 30)
+    x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
+    print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x0, y0, z0, roll0, pitch0, yaw0)
+    raw_input('hit return to continue< 2 >')
+  else:
+    sample.moveRelativeL(dy=CAMERA_OFFSET_X, dw=-1.57075, rate=10)
+    raw_input('hit return to continue< 3 >')	
+    
   # move to z_upper_limit
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
-  lines   = OpenHRP.iarray4SeqHolder()
-  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
+  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x0, y0, z0, roll0, pitch0, yaw0)
+  print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x0, y0, z_upper_limit, roll0, pitch0, yaw0)
   sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0)
+  x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+  print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x1, y1, z1, roll1, pitch1, yaw1)
+  raw_input('hit return to continue< 4 >')	
 
   # detect handle
   okCount = 0
   searchDirec = -1
-  while 1:
+  lines   = OpenHRP.iarray4SeqHolder()
+  while not SimulationRun:
     cvp.ref.get_configuration().activate_configuration_set('green')
     vs_svc.take_one_frame()
     time.sleep(0.1)
@@ -204,12 +236,8 @@ def moveTray(mode = 'shuffle'):
           speak('handle detected.')
           break
 
-      print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0],
-                                                                             comX,
-                                                                             dx,
-                                                                             lines.value[0][0],
-                                                                             comY,
-                                                                             dy)
+      print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"\
+          %(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
     else:
       speak('detecting handle.')
       dy = searchDirec * 0.03
@@ -230,36 +258,119 @@ def moveTray(mode = 'shuffle'):
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
-  # hard coded coordinates(typo)
-  sample.moveRelativeL(dy=-CAMERA_OFFSET_X, dz=-DISPLACEMENT_Z_TO_PICK_TRAY, rate=10)
+
+  x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x1, y1, z1, roll1, pitch1, yaw1)
+  dzz = ABS_Z_TO_PICK_TRAY - z1
+  print 'dzz = ', dzz
+  print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x1,
+        y1-CAMERA_OFFSET_X, 
+        z1+dzz,
+        roll1, pitch1, yaw1)
+  sample.moveRelativeL(dy=-CAMERA_OFFSET_X, dz=dzz, rate=10)
+  x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x2, y2, z2, roll2, pitch2, yaw2)
+  print 'finished grip tray'
+  raw_input('hit return to continue< 5 >')	
 
   # grasp & do the action
   sample.lhandClose()
   time.sleep(0.3)
   if mode == 'pull':
     #sample.moveRelativeL(dx=-0.05, rate=10)
+    print 'pull'
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x1, y1, z1, roll1, pitch1, yaw1)
+    print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(POSITION_X_TO_PULL_TRAY,
+          y1, 
+          z1,
+          roll1, pitch1, yaw1)
     sample.moveL(POSITION_X_TO_PULL_TRAY,y1,z1,roll1,pitch1,yaw1)
-  elif mode == 'shuffle':
-    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(POSITION_X_TO_PULL_TRAY,y1,z1,roll1,pitch1,yaw1)
+    x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+    print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2, y2, z2, roll2, pitch2, yaw2)
+    raw_input('hit return to continue< 8 >')	
 
-    # hard coded coordinates
-    sample.moveRelativeL(dx= DISPLACEMENT_Z_TO_SHUFFLE_TRAY, dz= DISPLACEMENT_Z_TO_SHUFFLE_TRAY, rate=5)
+  elif mode == 'shuffle':
+    print 'shuffle'
+    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x1, y1, z1, roll1, pitch1, yaw1)
+    print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(POSITION_X_TO_PULL_TRAY,
+          y1, 
+          z1,
+          roll1, pitch1, yaw1)
+    sample.moveL(POSITION_X_TO_PULL_TRAY,y1,z1,roll1,pitch1,yaw1)
+    x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+    print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2, y2, z2, roll2, pitch2, yaw2)
+    print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2+DISPLACEMENT_X_TO_SHUFFLE_TRAY,
+          y2, 
+          z2+DISPLACEMENT_Z_TO_SHUFFLE_TRAY,
+          roll2, pitch2, yaw2)
+
+    sample.moveRelativeL(dx= DISPLACEMENT_X_TO_SHUFFLE_TRAY, dz= DISPLACEMENT_Z_TO_SHUFFLE_TRAY,
+                         rate=5)
+    x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+    print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2, y2, z2, roll2, pitch2, yaw2)
     time.sleep(2)
     # hard coded coordinates
-    sample.moveRelativeL(dx=-DISPLACEMENT_Z_TO_SHUFFLE_TRAY, dz=-DISPLACEMENT_Z_TO_SHUFFLE_TRAY, rate=5)
+    print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2-DISPLACEMENT_X_TO_SHUFFLE_TRAY,
+          y2, 
+          z2-DISPLACEMENT_Z_TO_SHUFFLE_TRAY,
+          roll2, pitch2, yaw2)
+    sample.moveRelativeL(dx=-DISPLACEMENT_X_TO_SHUFFLE_TRAY, dz=-DISPLACEMENT_Z_TO_SHUFFLE_TRAY, 
+                         rate=5)
+    x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+    print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2, y2, z2, roll2, pitch2, yaw2)
+    raw_input('hit return to continue< 6 >')	
+
   elif mode == 'push':
+    print 'push'
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+    print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x1, y1, z1, roll1, pitch1, yaw1)
+    print   "->cmd               = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(POSITION_X_TO_PUSH_TRAY,
+          y1, 
+          z1,
+          roll1, pitch1, yaw1)
     sample.moveL(POSITION_X_TO_PUSH_TRAY,y1,z1,roll1,pitch1,yaw1)
+    x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+    print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+        %(x2, y2, z2, roll2, pitch2, yaw2)
+    raw_input('hit return to continue< 7 >')	
 
   # open & up & rotate
   sample.lhandOpen60()
   time.sleep(0.3)
-  # hard coded coordinates
-  sample.moveRelativeL(dz=DISPLACEMENT_Z_TO_PICK_TRAY, rate=20)
-  # hard coded coordinates
-  sample.moveRelativeL(dx=CAMERA_OFFSET_X,dw=1.57075, rate=40)
+  # return to original height
+  x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+  print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x1, y1, z1, roll1, pitch1, yaw1)
+  sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0, rate=20)
+  #sample.moveRelativeL(dz=dzz, rate=20)
+  x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+  print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x2, y2, z2, roll2, pitch2, yaw2)
+
+  if bodyinfo.modelName == 'PARM':
+    sample.setJointAnglesDeg([[0.0, 0.0, 0.0, -40.0, -140.0, 0.0],[]], 30)
+  else:
+    sample.moveRelativeL(dx=CAMERA_OFFSET_X,dw=1.57075, rate=40)
+  x2,y2,z2,roll2,pitch2,yaw2 = sample.getCurrentConfiguration(sample.armL_svc)
+  print   "->                  = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"\
+      %(x2, y2, z2, roll2, pitch2, yaw2)
 
 def loop(numTry=1):
   count = 0
@@ -404,9 +515,11 @@ if __name__ == '__main__' or __name__ == 'main':
   sample.servoOn(doConfirm=False) 
   speak('moving to the initial pose for demonstration.')
   sample.goInitial()
+  sample.lhandOpen()
   moveTray('shuffle')
   loop(1)   
   moveTray('push')
+  #moveTray('pull')
   speak('finished')
   sample.goOffPose(wait=False)
   sample.lhandClose()
