@@ -1,13 +1,17 @@
 #!/opt/grx/bin/hrpsyspy
-
 import sys
 import time
 import rtm
 import sample
 import types
+import math
 import Img.CameraCaptureServiceHelper
 import OpenHRP.CvProcessorServiceHelper
 import java.lang.System
+
+import bodyinfo
+
+SimulationRun = False
 
 x_upper_limit =  0.6
 x_lower_limit =  0
@@ -20,6 +24,16 @@ z_upper_limit  = 0.06+0.118
 z_lower_limit  = 0.06+0.065
 
 ik_errorlog_filename = '/tmp/ikerror'
+
+#rate70=70
+rate70=70
+rate60=60
+rate50=50
+rate40=40
+rate30=30
+rate10=10
+rateDefault=rate30
+rate5=5
 
 def speak(s):
   import os
@@ -83,7 +97,7 @@ def getCircles(color = 'orange'):
 
 
 def pickBall(dropDy):
-  if sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=10) < 0:
+  if sample.moveRelativeL(dx= 0.035, dz=-0.069, rate=rate10) < 0:
     print "ik error."
     speak('eye kay error.')
     speak('pull the tray.')
@@ -93,22 +107,22 @@ def pickBall(dropDy):
   for i in range(5):
     sample.lhandOpen(50-i*5)
     time.sleep(0.25)
-  sample.moveRelativeL(dz= 0.069, rate=70) # rate = 10
-  sample.moveRelativeL(dy= dropDy, rate=60) # rate = 10 
+  sample.moveRelativeL(dz= 0.069, rate=rate70) # rate = 10
+  sample.moveRelativeL(dy= dropDy, rate=rate60) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=60)
+  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=rate60)
   return True
 
 def moveTray(mode = 'shuffle'):
   # rotate
-  sample.moveRelativeL(dy=0.035, dw=-1.57075, rate=40)
+  sample.moveRelativeL(dy=0.035, dw=-1.57075, rate=rate40)
   
   # move to z_upper_limit
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
   lines   = OpenHRP.iarray4SeqHolder()
   print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
-  sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0)
+  sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0, rate=rateDefault)
 
   # detect handle
   okCount = 0
@@ -166,11 +180,11 @@ def moveTray(mode = 'shuffle'):
       dy = 0
       if len(lines.value) == 0:
         searchDirec *= -1
-    sample.moveRelativeL(dx=dx, dy=dy, rate=50)
+    sample.moveRelativeL(dx=dx, dy=dy, rate=rate50)
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dy=-0.035, dz=-0.1, rate=10)
+  sample.moveRelativeL(dy=-0.035, dz=-0.1, rate=rate10)
 
   # grasp & do the action
   sample.lhandClose()
@@ -178,23 +192,23 @@ def moveTray(mode = 'shuffle'):
   if mode == 'pull':
     #sample.moveRelativeL(dx=-0.05, rate=10)
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1)
+    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rateDefault)
   elif mode == 'shuffle':
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1)
+    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rateDefault)
 
-    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=5)
+    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=rate5)
     time.sleep(2)
-    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=5)
+    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=rate5)
   elif mode == 'push':
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1)
+    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1, rate=rateDefault)
 
   # open & up & rotate
   sample.lhandOpen60()
   time.sleep(0.3)
   sample.moveRelativeL(dz=0.1, rate=20)
-  sample.moveRelativeL(dx=0.035,dw=1.57075, rate=40)
+  sample.moveRelativeL(dx=0.035,dw=1.57075, rate=rate40)
 
 def loop(numTry=1):
   count = 0
@@ -224,7 +238,7 @@ def loop(numTry=1):
     else:
       r = 0
 
-    if r > 0.00001: # circle found
+    if r > 0.05: # circle found
       print detectColor
       shuffleCount = 0
       cx = -cx + 0.5
@@ -281,6 +295,8 @@ def loop(numTry=1):
         dx /= count+1.0
         dy /= count+1.0
     else: 
+      if r > 0.00001: # circle found
+        speak('ignored tiny circle')
       # circle NOT founded
       count = 0;
       dx = dy = dz = 0
@@ -331,8 +347,8 @@ def loop(numTry=1):
       print "z upper limit"
       dz = z_upper_limit - z
 
-    sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0)
-    if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0) < 0:
+    #sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0, rate=rateDefault) # wrong?
+    if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0, rate=rateDefault) < 0:
       print "ik error."
       speak('eye kay error.')
       logIkErrorPos(x+dx, y+dy, z+dz,0,-1.57075,0)
