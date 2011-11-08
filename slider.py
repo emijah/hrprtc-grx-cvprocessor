@@ -94,6 +94,7 @@ class SliderPanel_Percent( JPanel, ChangeListener ):
 
   def __init__( self, rtc, conf_set_name, param_name, inival=0.5, maxval=1 ):
     self.ratio = maxval / 100.0
+    self.defaultValue = inival
     inival = int( inival / self.ratio )
     minval = 0
     maxval = maxval * 100
@@ -104,7 +105,6 @@ class SliderPanel_Percent( JPanel, ChangeListener ):
     self.rtc = rtc
     self.conf_set_name = conf_set_name
     self.param_name = param_name
-    self.defaultValue = inival
     
     self.layout = BoxLayout( self, BoxLayout.X_AXIS )
     self.border = TitledBorder( lborder, param_name + ' (Slider:Percent)' )
