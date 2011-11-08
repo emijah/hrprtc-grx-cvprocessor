@@ -17,7 +17,7 @@ defaultProp = {}
 def loadDefaultValue(fname):
   global defaultProp
   for l in open(fname):
-    if not l or l.strip().startswith('#'):
+    if l.strip() == '' or l.strip().startswith('#'):
       continue
     toks = l.strip().split("=")
     key = toks[0].strip().split('.')
@@ -210,7 +210,7 @@ def makeConfigurationTabPanel_VideoStream() :
     for key in sorted_keys :
       #if key == 'brightness' :
       #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
-      if defaultProp.has_key(cs.id) and defaultProp.has_key(cs.id).has_key(key):
+      if defaultProp.has_key(cs.id) and defaultProp[cs.id].has_key(key):
         defaultValue = float( defaultProp[cs.id][key] )
       else:
         defaultValue = float( conf_set_dict[cs.id][key]) 
