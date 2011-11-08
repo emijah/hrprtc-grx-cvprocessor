@@ -13,6 +13,7 @@ from javax.swing.border import *
 
 from _SDOPackage import *
 
+mode = 'circle'
 defaultProp = {}
 def loadDefaultValue(fname):
   global defaultProp
@@ -266,7 +267,7 @@ def loop():
     vs_svc.take_one_frame()
 #    time.sleep(0.5)
     time.sleep(1) # ThinkPad X200
-    if 0:
+    if mode == 'circle':
       circles = OpenHRP.darray3SeqHolder()
       cvp_svc.HoughCircles(circles)
     else:
@@ -341,7 +342,11 @@ def printRtcConfiguration( rtc ) :
 
 
 if __name__ == '__main__' or __name__ == 'main':
-  if len(sys.argv) > 2:
+  if len(sys.argv) > 3:
+    robotHost = sys.argv[1]
+    loadDefaultValue(sys.argv[2])
+    mode = sys.argv[3]
+  elif len(sys.argv) > 2:
     robotHost = sys.argv[1]
     loadDefaultValue(sys.argv[2])
   elif len(sys.argv) > 1:
