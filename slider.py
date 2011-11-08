@@ -13,6 +13,18 @@ from javax.swing.border import *
 
 from _SDOPackage import *
 
+defaultProp = {}
+def loadDefaultValue(fname):
+  global defaultProp
+  for l in open(fname):
+    if not l or l.strip().startswith('#'):
+      continue
+    toks = l.strip().split("=")
+    key = toks[0].strip().split('.')
+    if not defaultProp.has_key(key[0]):
+      defaultProp[key[0]] = {}
+    defaultProp[key[0]][key[1]] = toks[1]
+    print key[0] + "-" + key[1] + "=" + toks[1]
 
 # Slider Panel for 0 to 256
 class SliderPanel( JPanel, ChangeListener ):
@@ -162,7 +174,12 @@ def makeConfigurationTabPanel( rtc ) :
     sorted_keys.sort()
     for key in sorted_keys :
     #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
-      slider = SliderPanel( rtc, cs.id, key, int( conf_set_dict[cs.id][key] ) )
+      if defaultProp.has_key(cs.id) and defaultProp[cs.id].has_key(key):
+        defaultValue = int( defaultProp[cs.id][key] )
+      else:
+        defaultValue = int( conf_set_dict[cs.id][key]) 
+      #slider = SliderPanel( rtc, cs.id, key, int( conf_set_dict[cs.id][key] ) )
+      slider = SliderPanel( rtc, cs.id, key, defaultValue)
       pnl_cfgset.add( slider )
   
   printRtcConfiguration( rtc )
@@ -193,7 +210,12 @@ def makeConfigurationTabPanel_VideoStream() :
     for key in sorted_keys :
       #if key == 'brightness' :
       #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
-      slider = SliderPanel_Percent( rtc, cs.id, key, float( conf_set_dict[cs.id][key] ) )
+      if defaultProp.has_key(cs.id) and defaultProp.has_key(cs.id).has_key(key):
+        defaultValue = float( defaultProp[cs.id][key] )
+      else:
+        defaultValue = float( conf_set_dict[cs.id][key]) 
+      #slider = SliderPanel_Percent( rtc, cs.id, key, float( conf_set_dict[cs.id][key] ) )
+      slider = SliderPanel_Percent( rtc, cs.id, key, defaultValue )
       pnl_cfgset.add( slider )
   
   printRtcConfiguration( rtc )
@@ -319,13 +341,15 @@ def printRtcConfiguration( rtc ) :
 
 
 if __name__ == '__main__' or __name__ == 'main':
-  if len(sys.argv) > 1:
+  if len(sys.argv) > 2:
+    robotHost = sys.argv[1]
+    loadDefaultValue(sys.argv[2])
+  elif len(sys.argv) > 1:
     robotHost = sys.argv[1]
   else:
     robotHost = None
   init( robotHost )
   cvp.ref.get_configuration().activate_configuration_set('orange')
-  
   ### YY ###
   init_gui()
   ### YY ###
