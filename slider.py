@@ -25,6 +25,7 @@ class SliderPanel( JPanel, ChangeListener ):
     self.conf_set_name = conf_set_name
     self.param_name = param_name
     
+    self.defaultValue = inival
     self.layout = BoxLayout( self, BoxLayout.X_AXIS )
     self.border = TitledBorder( lborder, param_name )
     
@@ -46,7 +47,13 @@ class SliderPanel( JPanel, ChangeListener ):
     self.add( self.slider )
     
     self.valtext.setText( str( self.getSliderValue() ) )
-  
+
+    self.button = JButton('d', actionPerformed=self.setDefaultValue)
+    self.add( self.button )
+
+  def setDefaultValue(self, e):
+    self.setSliderValue(self.defaultValue)  
+
   def setSliderValue( self, value ):
     self.slider.setValue( value )
     self.valtext.setText( str( self.getSliderValue() ) )
@@ -84,6 +91,7 @@ class SliderPanel_Percent( JPanel, ChangeListener ):
     self.rtc = rtc
     self.conf_set_name = conf_set_name
     self.param_name = param_name
+    self.defaultValue = inival
     
     self.layout = BoxLayout( self, BoxLayout.X_AXIS )
     self.border = TitledBorder( lborder, param_name + ' (Slider:Percent)' )
@@ -102,10 +110,15 @@ class SliderPanel_Percent( JPanel, ChangeListener ):
     self.slider.setLabelTable( self.slider.createStandardLabels( 50 ) )
     self.slider.setFont( Font( Font.SANS_SERIF, Font.BOLD, 10 ) )
     self.slider.addChangeListener( self )
-    
     self.add( self.slider )
+
+    self.button = JButton('d', actionPerformed=self.setDefaultValue)
+    self.add( self.button )
     
     self.valtext.setText( str( self.getSliderValue() )[:4] )
+
+  def setDefaultValue(self, e):
+    self.setSliderValue(self.defaultValue)  
   
   def setSliderValue( self, value ):
     self.slider.setValue( int( value / self.ratio ) )
@@ -178,10 +191,10 @@ def makeConfigurationTabPanel_VideoStream() :
     sorted_keys = conf_set_dict[cs.id].keys()
     sorted_keys.sort()
     for key in sorted_keys :
-      if key == 'brightness' :
+      #if key == 'brightness' :
       #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
-        slider = SliderPanel_Percent( rtc, cs.id, key, float( conf_set_dict[cs.id][key] ) )
-        pnl_cfgset.add( slider )
+      slider = SliderPanel_Percent( rtc, cs.id, key, float( conf_set_dict[cs.id][key] ) )
+      pnl_cfgset.add( slider )
   
   printRtcConfiguration( rtc )
   
