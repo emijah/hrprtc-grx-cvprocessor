@@ -66,6 +66,7 @@ class SliderPanel( JPanel, ChangeListener ):
 
   def setDefaultValue(self, e):
     self.setSliderValue(self.defaultValue)  
+    self.stateChanged(None)
 
   def setSliderValue( self, value ):
     self.slider.setValue( value )
@@ -132,6 +133,7 @@ class SliderPanel_Percent( JPanel, ChangeListener ):
 
   def setDefaultValue(self, e):
     self.setSliderValue(self.defaultValue)  
+    self.stateChanged(None)
   
   def setSliderValue( self, value ):
     self.slider.setValue( int( value / self.ratio ) )
@@ -177,10 +179,11 @@ def makeConfigurationTabPanel( rtc ) :
     #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
       if defaultProp.has_key(cs.id) and defaultProp[cs.id].has_key(key):
         defaultValue = int( defaultProp[cs.id][key] )
+        slider = SliderPanel( rtc, cs.id, key, defaultValue)
+	slider.setDefaultValue(None)
       else:
         defaultValue = int( conf_set_dict[cs.id][key]) 
-      #slider = SliderPanel( rtc, cs.id, key, int( conf_set_dict[cs.id][key] ) )
-      slider = SliderPanel( rtc, cs.id, key, defaultValue)
+        slider = SliderPanel( rtc, cs.id, key, defaultValue)
       pnl_cfgset.add( slider )
   
   printRtcConfiguration( rtc )
@@ -213,10 +216,11 @@ def makeConfigurationTabPanel_VideoStream() :
       #  print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
       if defaultProp.has_key(cs.id) and defaultProp[cs.id].has_key(key):
         defaultValue = float( defaultProp[cs.id][key] )
+        slider = SliderPanel_Percent( rtc, cs.id, key, defaultValue )
+	slider.setDefaultValue(None)
       else:
         defaultValue = float( conf_set_dict[cs.id][key]) 
-      #slider = SliderPanel_Percent( rtc, cs.id, key, float( conf_set_dict[cs.id][key] ) )
-      slider = SliderPanel_Percent( rtc, cs.id, key, defaultValue )
+        slider = SliderPanel_Percent( rtc, cs.id, key, defaultValue )
       pnl_cfgset.add( slider )
   
   printRtcConfiguration( rtc )
