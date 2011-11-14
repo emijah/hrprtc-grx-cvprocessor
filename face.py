@@ -14,7 +14,7 @@ import bodyinfo
 
 SimulationRun = False
 
-x_upper_limit =  0.6
+x_upper_limit =  0.5
 x_lower_limit =  0.3
 
 yL_upper_limit = 0.3
@@ -30,7 +30,7 @@ POSITION_X_LIMIT = 0.375
 ik_errorlog_filename = '/tmp/ikerror'
 
 #rate70=70
-rate70=60
+rate70=70
 rate60=60
 rate50=50
 rate40=40
@@ -130,11 +130,11 @@ def pickBall(dropDy):
   for i in range(5):
     sample.lhandOpen(50-i*5)
     time.sleep(0.25)
-  sample.moveRelativeL(dz=-dzz, rate=rate70) # rate = 10
-  sample.moveRelativeL(dy= dropDy, rate=rate60) # rate = 10 
+  sample.moveRelativeL(dz=-dzz, rate=rate60) # rate = 10
+  sample.moveRelativeL(dy= dropDy, rate=rate70) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=rate60)
+  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=rate70)
   return True
 
 def moveTray(mode = 'shuffle'):
@@ -151,6 +151,7 @@ def moveTray(mode = 'shuffle'):
   # detect handle
   okCount = 0
   searchDirec = -1
+  searchDirec_x = -1
   while 1:
     cvp.ref.get_configuration().activate_configuration_set('green')
     vs_svc.take_one_frame()
@@ -189,9 +190,9 @@ def moveTray(mode = 'shuffle'):
 
       print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
     else:
-      speak('detecting handle.')
-      time.sleep(1)
+      #speak('detecting handle.')
       dy = searchDirec * 0.03
+      dx = searchDirec_x * 0.03
       okCount = 0
 
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
@@ -199,11 +200,11 @@ def moveTray(mode = 'shuffle'):
       print "x limit"
       speak('limited ecks movement')
       dx = 0
+      searchDirec_x *= -1
     if (y1+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y1+dy and 0<dy):
       print "y limit"
       speak('limited wai movement')
       dy = 0
-      #if len(lines.value) == 0:
       searchDirec *= -1
     sample.moveRelativeL(dx=dx, dy=dy, rate=rate50)
   #  open & down
@@ -415,6 +416,9 @@ def getNearestFace(doSaveImage=False):
       y += ret.value[maxidx][0]
       r += ret.value[maxidx][2]
   if success_count > 0:
+    #x /= success_count*640.0
+    #y /= success_count*480.0
+    #r /= success_count*480.0
     x /= success_count*480.0
     y /= success_count*640.0
     r /= success_count*640.0
@@ -425,27 +429,29 @@ def loopDetectFace(num):
   sample.setJointAnglesDeg([[0,0, 10],[],[],[],[]], 0.5, wait=True)
   okCount = 0
   time.sleep(1)
-  for i in range(num):
+  i = 0
+  while i != num:
+    i += 1
     cx,cy,r = getNearestFace()
     if r < 0.05:
-      time.sleep(1)
+      sample.setJointAnglesDeg([[0,0,10],[],[],[],[]], 1, wait=True)
+      #time.sleep(1)
       continue
-    cx = -cx + 0.5
-    cy = -cy + 0.5
+    cx = 0.5 - cx
+    cy = 0.75 - cy 
 
     # determine the control values
     dx = dy = 0
-    if abs(cx)   > 0.15:
-      dx = 0.01
-    elif abs(cx) > 0.10: # used to be 0.02 
+    if abs(cx)   > 0.10:
+      dx = 0.02
+    elif abs(cx) > 0.5: # used to be 0.02 
       dx = 0.002
-    #if cx < 0:
     if cx > 0:
       dx *= -1
 
-    if abs(cy)   > 0.15:
+    if abs(cy)   > 0.10:
       dy = 0.01
-    elif abs(cy) > 0.10: # used to be 0.02
+    elif abs(cy) > 0.05: # used to be 0.02
       dy = 0.002
     if cy < 0:
       dy *= -1
@@ -453,21 +459,24 @@ def loopDetectFace(num):
     print "dx,dy = %f %f"%(dx, dy)
     stat = OpenHRP.RobotHardwareServicePackage.RobotStateHolder()
     sample.rh_svc.getStatus(stat)
-    pan  = stat.value.command[1]*180.0/math.pi + dx * 100
-    tilt = stat.value.command[2]*180.0/math.pi + dy * 100
-    pan = min(pan,  70);
-    pan = max(pan, -70);
-    tilt = min(tilt,   70);
+    pan  = stat.value.command[1]*180.0/math.pi + dy * 100
+    tilt = stat.value.command[2]*180.0/math.pi + dx * 100
+    pan = min(pan,  15);
+    pan = max(pan, -15);
+    tilt = min(tilt,   30);
     tilt = max(tilt,   10);
     print "pan, tilt : %f %f" %(pan, tilt)
-    sample.setJointAnglesDeg([[0,pan, tilt],[],[],[],[]], 0.4, wait=True)
+    sample.setJointAnglesDeg([[0,pan, tilt],[],[],[],[]], 0.3, wait=True)
 
     if dx == 0 and dy == 0:
       #getNearestFace(doSaveImage=True)
       okCount += 1
       if okCount > 1:
-        speak('Hello guys')
-        break
+        if num < 0:
+          speak('Hello')
+          okCount = 0 
+        else:
+         break
 
 def introduction1():
   stat = OpenHRP.RobotHardwareServicePackage.RobotStateHolder()
@@ -498,11 +507,14 @@ if __name__ == '__main__' or __name__ == 'main':
   init(robotHost)
 
   while(1):
+    sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_OFF)
+    sample.rh_svc.servo('RHAND', sample.SwitchStatus.SWITCH_OFF)
     sample.servoOn('BODY',doConfirm=False) 
     time.sleep(1)
     sample.servoOn('BODY',doConfirm=False) 
 
     loopDetectFace(100)
+    #loopDetectFace(-1)
     introduction1()
 
     speak('servo on')
@@ -510,7 +522,7 @@ if __name__ == '__main__' or __name__ == 'main':
     time.sleep(2)
     sample.servoOn(doConfirm=False) 
     time.sleep(1)
-    sample.servoOn('LHAND', doConfirm=False) 
+    sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_ON)
     speak('moving to initial pose, for demonstration.')
     sample.lhandOpen(30)
     sample.rhandOpen(30)
