@@ -22,9 +22,11 @@ yL_lower_limit =-0.05
 
 z_upper_limit  = 0.06+0.118
 #z_lower_limit  = 0.11+0.065
-z_lower_limit  = 0.06+0.065 - 0.065 # TODO
+#z_lower_limit  = 0.06+0.065 - 0.065 # TODO
+z_lower_limit  = 0.05+0.065 - 0.065 # TODO
 
-ABS_Z_TO_PICK_TRAY = 0.084
+#ABS_Z_TO_PICK_TRAY = 0.084
+ABS_Z_TO_PICK_TRAY = 0.074
 POSITION_X_LIMIT = 0.375
 
 ik_errorlog_filename = '/tmp/ikerror'
@@ -426,49 +428,53 @@ def getNearestFace(doSaveImage=False):
   return x, y, r
 
 def loopDetectFace(num):
-  sample.setJointAnglesDeg([[0,0, 10],[],[],[],[]], 0.5, wait=True)
   okCount = 0
   time.sleep(1)
   i = 0
   while i != num:
     i += 1
-    cx,cy,r = getNearestFace()
-    if r < 0.05:
-      sample.setJointAnglesDeg([[0,0,10],[],[],[],[]], 1, wait=True)
-      #time.sleep(1)
-      continue
-    cx = 0.5 - cx
-    cy = 0.75 - cy 
-
-    # determine the control values
-    dx = dy = 0
-    if abs(cx)   > 0.10:
-      dx = 0.02
-    elif abs(cx) > 0.5: # used to be 0.02 
-      dx = 0.002
-    if cx > 0:
-      dx *= -1
-
-    if abs(cy)   > 0.10:
-      dy = 0.01
-    elif abs(cy) > 0.05: # used to be 0.02
-      dy = 0.002
-    if cy < 0:
-      dy *= -1
-
-    print "dx,dy = %f %f"%(dx, dy)
     stat = OpenHRP.RobotHardwareServicePackage.RobotStateHolder()
     sample.rh_svc.getStatus(stat)
-    pan  = stat.value.command[1]*180.0/math.pi + dy * 100
-    tilt = stat.value.command[2]*180.0/math.pi + dx * 100
-    pan = min(pan,  15);
-    pan = max(pan, -15);
-    tilt = min(tilt,   30);
-    tilt = max(tilt,   10);
-    print "pan, tilt : %f %f" %(pan, tilt)
-    sample.setJointAnglesDeg([[0,pan, tilt],[],[],[],[]], 0.3, wait=True)
+    pan0  = stat.value.command[1]*180.0/math.pi
+    tilt0 = stat.value.command[2]*180.0/math.pi
+    cx,cy,r = getNearestFace()
+    faceRadiusMin = 0.05
+    if r > faceRadiusMin:
+      cx = 0.5 - cx
+      cy = 0.75 - cy 
 
-    if dx == 0 and dy == 0:
+      # determine the control values
+      dx = dy = 0
+      if abs(cx)   > 0.10:
+        dx = 0.02
+      elif abs(cx) > 0.5: # used to be 0.02 
+        dx = 0.002
+      if cx > 0:
+        dx *= -1
+  
+      if abs(cy)   > 0.10:
+        dy = 0.01
+      elif abs(cy) > 0.05: # used to be 0.02
+        dy = 0.002
+      if cy < 0:
+        dy *= -1
+
+      dx *= 100
+      dy *= 100
+      pan  = min(pan0+dy,  15)
+      pan  = max(pan,     -15)
+      tilt = min(tilt0+dx, 30)
+      tilt = max(tilt,     10)
+      print "dx,dy = %f %f"%(dx, dy)
+    else:
+      pan  =  0 
+      tilt = 10
+
+    print "pan, tilt, time : %f %f" %(pan, tilt)
+    time2move = max(0.3, max(abs(pan-pan0),abs(tilt-tilt0))/5.0)
+    sample.setJointAnglesDeg([[0,pan, tilt],[],[],[],[]], time2move, wait=True)
+
+    if r > faceRadiusMin and dx == 0 and dy == 0:
       #getNearestFace(doSaveImage=True)
       okCount += 1
       if okCount > 1:
