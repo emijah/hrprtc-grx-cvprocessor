@@ -12,5 +12,6 @@ module OpenHRP
   {
     unsigned long HoughCircles(out darray3Seq circles);
     unsigned long HoughLinesP(out iarray4Seq lines);
+    unsigned long detectFaces(out darray3Seq faces, in boolean doSaveImage);
   };
 };

@@ -151,8 +151,10 @@ private:
 public:
     CvSeq* m_circles;
     std::vector<cv::Vec4i> m_lines;
+    CvSeq* m_faces;
     void HoughCircles();
     void HoughLinesP();
+    void detectFaces(bool doSaveImage);
 };
 
 

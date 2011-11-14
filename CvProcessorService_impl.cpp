@@ -52,3 +52,17 @@ CvProcessorService_impl::~CvProcessorService_impl()
     }
     return 0;
 }
+
+::CORBA::ULong CvProcessorService_impl::detectFaces(OpenHRP::darray3Seq_out faces, bool doSaveImage)
+{
+    m_comp->detectFaces(doSaveImage);
+    faces = new OpenHRP::darray3Seq();
+    faces->length(m_comp->m_faces->total);
+    for (int i=0; i<m_comp->m_faces->total; i++) {
+        CvRect *r = (CvRect *) cvGetSeqElem (m_comp->m_faces, i);
+        faces[i][0] = cvRound (r->x + r->width * 0.5);
+        faces[i][1] = cvRound (r->y + r->height * 0.5);
+        faces[i][2] = cvRound ((r->width + r->height) * 0.25);
+    }
+    return 0;
+}

@@ -39,6 +39,7 @@ public:
     // attributes and operations
     ::CORBA::ULong HoughCircles(OpenHRP::darray3Seq_out circles);
     ::CORBA::ULong HoughLinesP(OpenHRP::iarray4Seq_out lines);
+    ::CORBA::ULong detectFaces(OpenHRP::darray3Seq_out faces, bool doSaveImage);
 
 private:
     CvProcessor* m_comp;
