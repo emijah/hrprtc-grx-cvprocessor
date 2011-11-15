@@ -12,6 +12,9 @@ import OpenHRP.RobotHardwareServicePackage.RobotState
 
 import bodyinfo
 
+global conf
+
+#SimulationRun = True
 SimulationRun = False
 
 POSITION_X_LIMIT = 0.375
@@ -36,65 +39,60 @@ rateDefault=rate40
 #
 # Parameters
 #
-BASE_OFFSET_Z 		= 0.06
+class DemoConfig:
+  def __init__(self, detectBaseOffset = -0.095):
+    self.baseOffsetZ          = detectBaseOffset
+    self.handLengthZ          = 0.103
+    self.trayHandleZ          = 0.080
+    self.gripDepthZ           = 0.050
+    self.ballShuffleT         = 3
+    self.trayHandleClearanceX = 0.045
+    self.searchMovementX      = 0.010	
+    self.ballGripAdjX         = 0.003
+    self.dropMarginY          = 0.0
+    # the x,z displacement to shuffle tray in absolute value [m]
+    self.shuffleTrayDX        = 0.015
+    # the absolute position x to push/pull tray [m]
+    self.pullTrayX            = 0.135 #<- based on initial position of moveTray
+    self.pushTrayX            = 0.20
+    self.ballClearance        = 0.05
 
-HAND_LENGTH_Z		= 0.103
+    # number of pixels
+    self.heightView           = 480
+    self.widthView            = 640
+    
+    # the distance between camera center and hand center
+    self.cameraOffsetX        = 0.035 #for HIRO
+    
+    # the z displacement to pick ball/tray in absolute value [m]
+    self.pickBallZ            =-0.015 # 0.030, 0.000
+    self.pickTrayZ            = 0.074
+    #ABS_Z_TO_PICK_TRAY = HAND_LENGTH_Z - BASE_OFFSET_Z + TRAY_HANDLE_Z - GRIP_DEPTH_Z
+    
+    # contol values for 5% and 3% diffence [m]
+    self.controlValueX05      = 0.01
+    self.controlValueX03      = 0.002
+    self.controlValueY05      = 0.01
+    self.controlValueY03      = 0.002
+    
+    # contol value z to search the target
+    self.controlValueZ        = 0.02
 
-TRAY_HANDLE_Z		= 0.080
-GRIP_DEPTH_Z		= 0.050
-BALL_SHUFFLE_T		= 3
-TRAY_HANDLE_CLEARANCE_X	= 0.045
-SEARCH_MOVEMENT_X	= 0.010	
-BALL_GRIP_ADJ_X		= 0.003
-DROP_MARGIN_Y		= 0.0
+    self.update(detectBaseOffset)
+
+  def update(self, detectBaseOffset):
+    self.lowerLimitX          = 0.3
+    self.upperLimitX          = 0.5
+    self.lowerLimitYL         =-0.05
+    self.upperLimitYL         = 0.3
+    self.lowerLimitYR         =-self.lowerLimitYL
+    self.upperLimitYR         =-self.upperLimitYL
+    self.lowerLimitZ          = self.baseOffsetZ + self.handLengthZ + self.ballClearance
+    self.upperLimitZ          = self.lowerLimitZ - self.ballClearance + 0.170
 
 SLEEP_ONE_BLOCK		= 60
-#SLEEP_ONE_BLOCK		= 1
-
 MAX_RESET_COUNT		= 2
 MAX_RETRY_COUNT		= 15
-
-# the x,z displacement to shuffle tray in absolute value [m]
-DISPLACEMENT_X_TO_SHUFFLE_TRAY = 0.015
-
-# the absolute position x to push/pull tray [m]
-POSITION_X_TO_PULL_TRAY = 0.135 #<- based on initial position of moveTray
-POSITION_X_TO_PUSH_TRAY = 0.20
-
-BALL_CLEARANCE = 0.050
-
-x_upper_limit =  0.5
-x_lower_limit =  0.3
-yL_upper_limit = 0.3
-yL_lower_limit =-0.05
-z_upper_limit  = 0.06+0.118
-z_lower_limit  = 0.05+0.065 - 0.065 # TODO
-#z_lower_limit  = HAND_LENGTH_Z - BASE_OFFSET_Z + BALL_CLEARANCE
-#z_upper_limit  = z_lower_limit + 0.100 - BALL_CLEARANCE # 0.100,0.160
-
-# number of pixels
-NUM_PIXELS_HEIGHT=480
-NUM_PIXELS_WIDTH =640
-
-# the distance between camera center and hand center
-CAMERA_OFFSET_X=0.035 #for HIRO
-#CAMERA_OFFSET_X=0.005 #for Y PARM 
-
-# the z displacement to pick ball/tray in absolute value [m]
-ABS_Z_TO_PICK_BALL = -0.015 # 0.030, 0.000
-#ABS_Z_TO_PICK_TRAY = HAND_LENGTH_Z - BASE_OFFSET_Z + TRAY_HANDLE_Z - GRIP_DEPTH_Z
-ABS_Z_TO_PICK_TRAY = 0.074
-
-# contol value x for 5% and 3% diffence [m]
-CONTROL_VALUE_X_05 = 0.01
-CONTROL_VALUE_X_03 = 0.002
-# contol value y for 5% and 3% diffence [m]
-CONTROL_VALUE_Y_05 = 0.01
-CONTROL_VALUE_Y_03 = 0.002
-
-# contol value z to search the target
-CONTROL_VALUE_Z_SEARCHING = 0.02
-
 #############################
 
 #############################
@@ -121,16 +119,19 @@ def init(host='localhost'):
   global vs_head, vs_head_svc, cvp_head, cvp_head_svc
 
   sample.init(host)
+
+  # for hand
   vs = rtm.findRTC("VideoStream0")
-  vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
-  vs.start()
+  if vs != None:
+    vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
+    vs.start()
 
-  cvp = rtm.findRTC("CvProcessor0")
-  cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
-  cvp.start()
+    cvp = rtm.findRTC("CvProcessor0")
+    cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
+    cvp.start()
 
-  rtm.connectPorts(vs.port("MultiCameraImages"),   cvp.port("MultiCameraImage"))
-  vs_svc.take_one_frame()
+    rtm.connectPorts(vs.port("MultiCameraImages"),   cvp.port("MultiCameraImage"))
+    vs_svc.take_one_frame()
 
   # for head
   vs_head = rtm.findRTC("VideoStream0_head")
@@ -145,23 +146,23 @@ def init(host='localhost'):
     rtm.connectPorts(vs_head.port("MultiCameraImages"),   cvp_head.port("MultiCameraImage"))
     vs_head_svc.take_one_frame()
 
-    time.sleep(1)
+  time.sleep(1)
 
 def getControlValue(comX, comY):
   # determine the control values
   dx = 0.
   dy = 0.
   if abs(comX)   > 0.05:
-    dx = CONTROL_VALUE_X_05
+    dx = conf.controlValueX05
   elif abs(comX) > 0.03: # used to be 0.02 
-    dx = CONTROL_VALUE_X_03
+    dx = conf.controlValueX03
   if comX > 0:
     dx *= -1
 
   if abs(comY)   > 0.05:
-    dy = CONTROL_VALUE_Y_05
+    dy = conf.controlValueY05
   elif abs(comY) > 0.03: # used to be 0.02 
-    dy = CONTROL_VALUE_Y_03
+    dy = conf.controlValueY03
   if comY < 0:
     dy *= -1
 
@@ -193,18 +194,39 @@ def getCircles(color = 'orange'):
       y += ret.value[maxidx][0]
       r += ret.value[maxidx][2]
   if success_count > 0:
-    x /= success_count*NUM_PIXELS_HEIGHT
-    y /= success_count*NUM_PIXELS_WIDTH
-    r /= success_count*NUM_PIXELS_WIDTH
+    x /= success_count*conf.heightView
+    y /= success_count*conf.widthView
+    r /= success_count*conf.widthView
 
   return x, y, r
+
+
+def doLimit(curV, diffV, lwrLimitV, uprLimitV, valString, spkString):
+
+  inLimit = False
+  
+  if (curV+diffV) < lwrLimitV:
+    print valString+" lower limit"
+    diffV = lwrLimitV - curV
+    
+  elif uprLimitV < (curV+diffV):
+    print valString+" upper limit"
+    diffV = uprLimitV - curV
+
+  else:
+    inLimit = True
+
+  if not inLimit and spkString:
+    speak('limited %s movement'%spkString)
+
+  return diffV, inLimit
 
 
 def pickBall(dropDy):
   x0,y0,z0,roll0,pitch0,yaw0 = \
       sample.getCurrentConfiguration(sample.armL_svc)
   dzz = z_lower_limit - z0
-  if sample.moveRelativeL(dx= 0.035, dz=dzz, rate=rate10) < 0:
+  if sample.moveRelativeL(dx= conf.cameraOffsetX, dz=dzz, rate=rate10) < 0:
     print "ik error."
     speak('eye kay error.')
     speak('pull the tray.')
@@ -218,38 +240,42 @@ def pickBall(dropDy):
   sample.moveRelativeL(dy= dropDy, rate=rate70) # rate = 10 
   sample.lhandOpen60()
   time.sleep(0.3)
-  sample.moveRelativeL(dx=-0.035, dy=-dropDy, rate=rate70)
+  sample.moveRelativeL(dx=-conf.cameraOffsetX, dy=-dropDy, rate=rate70)
   return True
 
 def moveTray(mode = 'shuffle'):
   global POSITION_X_LIMIT
   # rotate
-  sample.moveRelativeL(dy=0.035, dw=-1.57075, rate=rate40)
+  sample.moveRelativeL(dy=conf.cameraOffsetX, dw=-1.57075, rate=rate40)
   
   # move to z_upper_limit
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
-  lines   = OpenHRP.iarray4SeqHolder()
   print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
-  sample.moveL(x0, y0, z_upper_limit, roll0, pitch0, yaw0, rate=rateDefault)
+  sample.moveL(x0, y0, conf.upperLimitZ, roll0, pitch0, yaw0, rate=rateDefault)
 
   # detect handle
+  lines   = OpenHRP.iarray4SeqHolder()
   okCount = 0
   searchDirec = -1
   searchDirec_x = -1
   while 1:
-    cvp.ref.get_configuration().activate_configuration_set('green')
-    vs_svc.take_one_frame()
-    time.sleep(0.1)
-    cvp_svc.HoughLinesP(lines)
+    if not SimulationRun:
+      cvp.ref.get_configuration().activate_configuration_set('green')
+      vs_svc.take_one_frame()
+      time.sleep(0.1)
+      cvp_svc.HoughLinesP(lines)
+      linesValue = lines.value
+    else:
+      linesValue = [[conf.widthView/2.0, conf.heightView/2.0, conf.widthView/2.0, conf.heightView/2.0]]
     dx = dy = 0.0
-    if len(lines.value) > 0:
+    if len(linesValue) > 0:
       ditectDelec = 0
       comX = comY = 0.0
-      for pnt in lines.value:
+      for pnt in linesValue:
         comX += pnt[0] + pnt[2]
         comY += pnt[1] + pnt[3]
-      comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.01
-      comY = comY / 2.0 / len(lines.value) / 480.0 - 0.5 
+      comX = comX / 2.0 / len(linesValue) / conf.widthView  - 0.5 + 0.01
+      comY = comY / 2.0 / len(linesValue) / conf.heightView - 0.5 
       dx,dy = getControlValue(comX, comY)
       if dx == 0 and dy == 0:
         okCount += 1
@@ -257,7 +283,7 @@ def moveTray(mode = 'shuffle'):
           speak('handle detected.')
           break
 
-      print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(lines.value[0][0], comX, dx, lines.value[0][0], comY, dy)
+      print "x[0]=%6.3f comX=%6.3f dx=%6.3f y[0]=%6.3f comY=%6.3f dy=%6.3f"%(linesValue[0][0], comX, dx, linesValue[0][0], comY, dy)
     else:
       #speak('detecting handle.')
       dy = searchDirec * 0.03
@@ -265,28 +291,31 @@ def moveTray(mode = 'shuffle'):
       okCount = 0
 
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    if (x1+dx<x_lower_limit and dx<0) or (x_upper_limit<x1+dx and 0<dx):
-      print "x limit"
-      speak('limited ecks movement')
-      dx = 0
-      searchDirec_x *= -1
-    if (y1+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y1+dy and 0<dy):
-      print "y limit"
-      speak('limited wai movement')
-      dy = 0
-      searchDirec *= -1
-    sample.moveRelativeL(dx=dx, dy=dy, rate=rate50)
+    dx, inLimitX = doLimit(x1, dx, conf.lowerLimitX,  conf.upperLimitX,  'x', 'ecks')
+    dy, inLimitY = doLimit(y1, dy, conf.lowerLimitYL, conf.upperLimitYL, 'y', 'wai')
+
+    # change Y search direction -> do the same with X
+    if len(linesValue) == 0:
+      if not inLimitX:
+        searchDirec_x *= -1
+      if not inLimitY:
+        searchDirec   *= -1
+
+    if sample.moveL(x1+dx, y1+dy, z1, -math.pi/4,-math.pi/2,-math.pi/4,rate=rate40) < 0:
+      print "ik error."
+      speak('eye kay error.')
+      logIkErrorPos(x1+dx, y1+dy, z1, -math.pi/4,-math.pi/2,-math.pi/4)
+
   #  open & down
   sample.lhandOpen60()
   time.sleep(0.3)
-  dzz = ABS_Z_TO_PICK_TRAY - z1 # TODO 
-  sample.moveRelativeL(dy=-0.035, dz=dzz, rate=rate10)
+  dzz = conf.pickTrayZ - z1 # TODO 
+  sample.moveRelativeL(dy=-conf.cameraOffsetX, dz=dzz, rate=rate10)
 
   # grasp & do the action
   sample.lhandClose()
   time.sleep(0.3)
   if mode == 'pull':
-    #sample.moveRelativeL(dx=-0.05, rate=10)
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
     sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rate20)
   elif mode == 'shuffle':
@@ -301,13 +330,11 @@ def moveTray(mode = 'shuffle'):
     sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1, rate=rate20)
 
   # open & up & rotate
-  #sample.lhandOpen60()
   sample.lhandOpen()
   time.sleep(0.3)
   x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-  #sample.moveRelativeL(dz=0.1, rate=20)
-  sample.moveL(x1, y1, z_upper_limit, roll1, pitch1, yaw1, rate=rate20)
-  sample.moveRelativeL(dx=0.035,dw=1.57075, rate=rate40)
+  sample.moveL(x1, y1, conf.upperLimitZ, roll1, pitch1, yaw1, rate=rate20)
+  sample.moveRelativeL(dx=conf.cameraOffsetX, dw=1.57075, rate=rate40)
 
 def loop(numTry=1):
   count = 0
@@ -560,17 +587,19 @@ if __name__ == '__main__' or __name__ == 'main':
   else:
     robotHost = None
 
+  conf = DemoConfig()
+
   speak('initializing system')
   init(robotHost)
 
   while(1):
     sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_OFF)
     sample.rh_svc.servo('RHAND', sample.SwitchStatus.SWITCH_OFF)
-    speak('servo on')
+    time.sleep(1)
     sample.servoOn(doConfirm=False) 
     time.sleep(2)
     sample.servoOn(doConfirm=False) 
-    time.sleep(1)
+    speak('servo on')
     sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_ON)
 
     speak('moving to initial pose, for demonstration.')
