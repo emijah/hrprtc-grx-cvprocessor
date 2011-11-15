@@ -43,8 +43,10 @@ class DemoConfig:
   def __init__(self, detectBaseOffset = -0.095):
     self.baseOffsetZ          = detectBaseOffset
     self.handLengthZ          = 0.103
-    self.trayHandleZ          = 0.080
-    self.gripDepthZ           = 0.050
+    #self.trayHandleZ          = 0.080
+    #self.gripDepthZ           = 0.050
+    self.trayHandleZ          = 0.110
+    self.gripDepthZ           = 0.044
     self.ballShuffleT         = 3
     self.trayHandleClearanceX = 0.045
     self.searchMovementX      = 0.010	
@@ -64,10 +66,8 @@ class DemoConfig:
     # the distance between camera center and hand center
     self.cameraOffsetX        = 0.035 #for HIRO
     
-    # the z displacement to pick ball/tray in absolute value [m]
+    # the z displacement to pick ball in absolute value [m]
     self.pickBallZ            =-0.015 # 0.030, 0.000
-    self.pickTrayZ            = 0.074
-    #ABS_Z_TO_PICK_TRAY = HAND_LENGTH_Z - BASE_OFFSET_Z + TRAY_HANDLE_Z - GRIP_DEPTH_Z
     
     # contol values for 5% and 3% diffence [m]
     self.controlValueX05      = 0.01
@@ -90,6 +90,10 @@ class DemoConfig:
     self.lowerLimitZ          = self.baseOffsetZ + self.handLengthZ + self.ballClearance
     self.upperLimitZ          = self.lowerLimitZ - self.ballClearance + 0.170
 
+    # the z displacement to pick ball in absolute value [m]
+    #self.pickTrayZ            = 0.074
+    self.pickTrayZ            = self.baseOffsetZ + self.trayHandleZ - self.gripDepthZ + self.handLengthZ
+
 SLEEP_ONE_BLOCK		= 60
 MAX_RESET_COUNT		= 2
 MAX_RETRY_COUNT		= 15
@@ -104,7 +108,8 @@ ik_errorlog_filename = '/tmp/ikerror'
 def speak(s):
   import os
   if type(s) == types.StringType:
-    os.system('spd-say "'+s+'"')
+    os.system('python speak.py "'+s+'"')
+    #os.system('spd-say "'+s+'"')
   else:
     print 'error(speak): input is not a string'
 
@@ -225,20 +230,19 @@ def doLimit(curV, diffV, lwrLimitV, uprLimitV, valString, spkString):
 def pickBall(dropDy):
   x0,y0,z0,roll0,pitch0,yaw0 = \
       sample.getCurrentConfiguration(sample.armL_svc)
-  dzz = z_lower_limit - z0
+  dzz = conf.lowerLimitZ - z0
   if sample.moveRelativeL(dx= conf.cameraOffsetX, dz=dzz, rate=rate10) < 0:
     print "ik error."
     speak('eye kay error.')
     speak('pull the tray.')
     moveTray('pull')
     return False
-  #sample.lhandOpen30()
   for i in range(5):
     sample.lhandOpen(50-i*5)
     time.sleep(0.25)
   sample.moveRelativeL(dz=-dzz, rate=rate60) # rate = 10
   sample.moveRelativeL(dy= dropDy, rate=rate70) # rate = 10 
-  sample.lhandOpen60()
+  sample.lhandOpen(60)
   time.sleep(0.3)
   sample.moveRelativeL(dx=-conf.cameraOffsetX, dy=-dropDy, rate=rate70)
   return True
@@ -246,9 +250,9 @@ def pickBall(dropDy):
 def moveTray(mode = 'shuffle'):
   global POSITION_X_LIMIT
   # rotate
-  sample.moveRelativeL(dy=conf.cameraOffsetX, dw=-1.57075, rate=rate40)
+  sample.moveRelativeL(dy=conf.cameraOffsetX, dw=-math.pi/2, rate=rate40)
   
-  # move to z_upper_limit
+  # move to conf.upperLimitZ
   x0,y0,z0,roll0,pitch0,yaw0 = sample.getCurrentConfiguration(sample.armL_svc)
   print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x0, y0, z0, roll0, pitch0, yaw0)
   sample.moveL(x0, y0, conf.upperLimitZ, roll0, pitch0, yaw0, rate=rateDefault)
@@ -307,7 +311,7 @@ def moveTray(mode = 'shuffle'):
       logIkErrorPos(x1+dx, y1+dy, z1, -math.pi/4,-math.pi/2,-math.pi/4)
 
   #  open & down
-  sample.lhandOpen60()
+  sample.lhandOpen(60)
   time.sleep(0.3)
   dzz = conf.pickTrayZ - z1 # TODO 
   sample.moveRelativeL(dy=-conf.cameraOffsetX, dz=dzz, rate=rate10)
@@ -317,29 +321,30 @@ def moveTray(mode = 'shuffle'):
   time.sleep(0.3)
   if mode == 'pull':
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rate20)
+    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rate10)
   elif mode == 'shuffle':
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
     sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rateDefault)
 
-    sample.moveRelativeL(dx= 0.015, dz= 0.06, rate=rate5)
-    time.sleep(2)
-    sample.moveRelativeL(dx=-0.015, dz=-0.06, rate=rate5)
+    sample.moveRelativeL(dx= conf.shuffleTrayDX, dz= 0.06, rate=rate5)
+    time.sleep(conf.ballShuffleT)
+    sample.moveRelativeL(dx=-conf.shuffleTrayDX, dz=-0.06, rate=rate5)
   elif mode == 'push':
     x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1, rate=rate20)
+    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1, rate=rate10)
 
   # open & up & rotate
   sample.lhandOpen()
   time.sleep(0.3)
   x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
   sample.moveL(x1, y1, conf.upperLimitZ, roll1, pitch1, yaw1, rate=rate20)
-  sample.moveRelativeL(dx=conf.cameraOffsetX, dw=1.57075, rate=rate40)
+  sample.moveRelativeL(dx=conf.cameraOffsetX, dw=math.pi/2, rate=rate40)
 
 def loop(numTry=1):
   count = 0
+  retryCount = 0
   shuffleCount = 0
-  sample.lhandOpen60()
+  sample.lhandOpen(60)
   lastY = 0
   tryCount = 0
   numOrange = 0
@@ -350,22 +355,32 @@ def loop(numTry=1):
     x,y,z,roll,pitch,yaw = sample.getCurrentConfiguration(sample.armL_svc)
     print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z, roll, pitch, yaw)
 
-    cx_orange, cy_orange, r_orange = getCircles('orange')
-    cx_blue, cy_blue, r_blue = getCircles('blue')
+    if not SimulationRun:
+      cx_orange, cy_orange, r_orange = getCircles('orange')
+      cx_blue, cy_blue, r_blue = getCircles('blue')
 
-    if cx_orange > cx_blue and r_orange > 0:
-      cx = cx_orange  
-      cy = cy_orange  
-      r  = r_orange  
-      detectColor = 'orange'
-    elif r_blue > 0:
-      cx = cx_blue
-      cy = cy_blue
-      r  = r_blue
-      detectColor = 'blue'
+      if cx_orange > cx_blue and r_orange > 0:
+        cx = cx_orange  
+        cy = cy_orange  
+        r  = r_orange  
+        detectColor = 'orange'
+      elif r_blue > 0:
+        cx = cx_blue
+        cy = cy_blue
+        r  = r_blue
+        detectColor = 'blue'
+      else:
+        r = 0
     else:
-      r = 0
-
+      import random
+      cx = random.random()*0.1+0.45
+      cy = random.random()*0.1+0.45
+      r  = random.random()*0.15
+      if random.random() > 0.5:
+        detectColor = 'orange'
+      else:
+        detectColor = 'blue'
+      
     if r > 0.05: # circle found
       print detectColor
       shuffleCount = 0
@@ -378,7 +393,7 @@ def loop(numTry=1):
 
       # speak adjusting parameters
 
-      if dx == 0 and dy == 0 and (dz <= z_lower_limit or dz == 0):
+      if dx == 0 and dy == 0 and (dz <= conf.lowerLimitZ or dz == 0):
         count += 1
       elif count > 1:
         count -= 1
@@ -403,22 +418,12 @@ def loop(numTry=1):
         dx /= count+1.0
         dy /= count+1.0
     else: 
-      if r > 0.00001: # circle found
-        speak('ignored tiny circle')
-        time.sleep(3)
+      #if r > 0.00001: # circle found
+      # speak('ignored tiny circle')
       # circle NOT founded
       count = 0;
       dx = dy = dz = 0
-      
-      #if x < 0.4:
-      #  dx = 0.02
-
-      #if lastY + 0.03 < y:
-      #  dy = -0.02
-      #elif y < lastY - 0.03:
-      #  dy = 0.02
-
-      if z + 0.02 < z_upper_limit:
+      if z + 0.02 < conf.upperLimitZ:
         dz = 0.02
 
       shuffleCount += 1
@@ -441,33 +446,56 @@ def loop(numTry=1):
       
     rate = rateDefault
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
-    #if (x+dx<x_lower_limit and dx<0) or (x_upper_limit<x+dx and 0<dx):
-    if (x+dx<POSITION_X_LIMIT and dx<0) or (x_upper_limit<x+dx and 0<dx):
-      print "x limit"
-      #speak('limited ecks movement')
-      speak('return to initial position')
-      rate = rate10
-      dx = x0 - x
-      dy = y0 - y
-      dz = z0 - z
-    else:
-      if (y+dy<yL_lower_limit and dy<0) or (yL_upper_limit<y+dy and 0<dy):
-        print "y limit"
-        speak('limited wai movement')
-        dy = 0
-      if z+dz<z_lower_limit and dz<0:
-        print "z lower limit"
-        #speak('limited zed movement')
-        dz = z_lower_limit - z
-      elif z_upper_limit<z+dz and 0<dz:
-        print "z upper limit"
-        dz = z_upper_limit - z
+    if 0: # irex 2011 for hiro
+      if (x+dx<POSITION_X_LIMIT and dx<0) or (conf.upperLimitX<x+dx and 0<dx):
+        print "x limit"
+        speak('return to initial position')
+        rate = rate10
+        dx = x0 - x
+        dy = y0 - y
+        dz = z0 - z
+      else:
+        if (y+dy<conf.lowerLimitYL and dy<0) or (conf.upperLimitYL<y+dy and 0<dy):
+          print "y limit"
+          speak('limited wai movement')
+          dy = 0
+        if z+dz<conf.lowerLimitZ and dz<0:
+          print "z lower limit"
+          #speak('limited zed movement')
+          dz = conf.lowerLimitZ - z
+        elif conf.upperLimitZ<z+dz and 0<dz:
+          print "z upper limit"
+          dz = conf.upperLimitZ - z
 
-    #sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0, rate=rateDefault) # wrong?
-    if sample.moveL(x+dx, y+dy, z+dz,0,-1.57075,0, rate=rateDefault) < 0:
+      if sample.moveL(x+dx, y+dy, z+dz,0, -math.pi/2, 0, rate=rateDefault) < 0:
+        print "ik error."
+        speak('eye kay error.')
+        logIkErrorPos(x+dx, y+dy, z+dz,0, -math.pi/2, 0)
+
+    # limit motion
+    dx,inLimitX = doLimit(x, dx, conf.pullTrayX + conf.trayHandleClearanceX, conf.upperLimitX, 'x', 'ecks')
+    dy,inLimitY = doLimit(y, dy, conf.lowerLimitYL, conf.upperLimitYL, 'y', 'wai')
+    dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ,  conf.upperLimitZ,  'z', None)
+
+    if not inLimitX:
+      limitHitX = limitHitX + 1
+      if limitHitX > MAX_RESET_COUNT:
+        return # give up
+      else:
+        #sample.moveL(x0, y0, z0, 0,-math.pi/2, 0, rate=rateDefault)
+        return
+        # should do IK check here
+    elif sample.moveL(x+dx, y+dy, z+dz, 0, -math.pi/2, 0, rate=rateDefault) < 0:
       print "ik error."
       speak('eye kay error.')
-      logIkErrorPos(x+dx, y+dy, z+dz,0,-1.57075,0)
+      logIkErrorPos(x+dx, y+dy, z+dz, 0, -math.pi/2, 0)
+
+    if bodyinfo.modelName == 'PARM':
+      time.sleep(1.0)
+      retryCount = retryCount + 1
+      if retryCount > MAX_RETRY_COUNT:
+        speak('over heating')
+        return
 
 def getNearestFace(doSaveImage=False):
   NUM_TO_TAKE=1
@@ -492,12 +520,9 @@ def getNearestFace(doSaveImage=False):
       y += ret.value[maxidx][0]
       r += ret.value[maxidx][2]
   if success_count > 0:
-    #x /= success_count*640.0
-    #y /= success_count*480.0
-    #r /= success_count*480.0
-    x /= success_count*480.0
-    y /= success_count*640.0
-    r /= success_count*640.0
+    x /= success_count*conf.heightView
+    y /= success_count*conf.widthView
+    r /= success_count*conf.widthView
 
   return x, y, r
 
