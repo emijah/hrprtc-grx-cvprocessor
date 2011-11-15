@@ -14,38 +14,99 @@ import bodyinfo
 
 SimulationRun = False
 
-x_upper_limit =  0.5
-x_lower_limit =  0.3
-
-yL_upper_limit = 0.3
-yL_lower_limit =-0.05
-
-z_upper_limit  = 0.06+0.118
-#z_lower_limit  = 0.11+0.065
-#z_lower_limit  = 0.06+0.065 - 0.065 # TODO
-z_lower_limit  = 0.05+0.065 - 0.065 # TODO
-
-#ABS_Z_TO_PICK_TRAY = 0.084
-ABS_Z_TO_PICK_TRAY = 0.074
 POSITION_X_LIMIT = 0.375
 
-ik_errorlog_filename = '/tmp/ikerror'
+#############################
+#
+# Rates
+#
+rate70 = 70
+rate60 = 60
+rate50 = 50
+rate40 = 40
+rate30 = 30
+rate20 = 20
+rate10 = 10
+rate5  = 5
+rateDefault=rate40
 
-#rate70=70
-rate70=70
-rate60=60
-rate50=50
-rate40=40
-rate30=30
-rate20=20
-rate10=10
-rateDefault=rate30
-rate5=5
+#############################
+
+#############################
+#
+# Parameters
+#
+BASE_OFFSET_Z 		= 0.06
+
+HAND_LENGTH_Z		= 0.103
+
+TRAY_HANDLE_Z		= 0.080
+GRIP_DEPTH_Z		= 0.050
+BALL_SHUFFLE_T		= 3
+TRAY_HANDLE_CLEARANCE_X	= 0.045
+SEARCH_MOVEMENT_X	= 0.010	
+BALL_GRIP_ADJ_X		= 0.003
+DROP_MARGIN_Y		= 0.0
+
+SLEEP_ONE_BLOCK		= 60
+#SLEEP_ONE_BLOCK		= 1
+
+MAX_RESET_COUNT		= 2
+MAX_RETRY_COUNT		= 15
+
+# the x,z displacement to shuffle tray in absolute value [m]
+DISPLACEMENT_X_TO_SHUFFLE_TRAY = 0.015
+
+# the absolute position x to push/pull tray [m]
+POSITION_X_TO_PULL_TRAY = 0.135 #<- based on initial position of moveTray
+POSITION_X_TO_PUSH_TRAY = 0.20
+
+BALL_CLEARANCE = 0.050
+
+x_upper_limit =  0.5
+x_lower_limit =  0.3
+yL_upper_limit = 0.3
+yL_lower_limit =-0.05
+z_upper_limit  = 0.06+0.118
+z_lower_limit  = 0.05+0.065 - 0.065 # TODO
+#z_lower_limit  = HAND_LENGTH_Z - BASE_OFFSET_Z + BALL_CLEARANCE
+#z_upper_limit  = z_lower_limit + 0.100 - BALL_CLEARANCE # 0.100,0.160
+
+# number of pixels
+NUM_PIXELS_HEIGHT=480
+NUM_PIXELS_WIDTH =640
+
+# the distance between camera center and hand center
+CAMERA_OFFSET_X=0.035 #for HIRO
+#CAMERA_OFFSET_X=0.005 #for Y PARM 
+
+# the z displacement to pick ball/tray in absolute value [m]
+ABS_Z_TO_PICK_BALL = -0.015 # 0.030, 0.000
+#ABS_Z_TO_PICK_TRAY = HAND_LENGTH_Z - BASE_OFFSET_Z + TRAY_HANDLE_Z - GRIP_DEPTH_Z
+ABS_Z_TO_PICK_TRAY = 0.074
+
+# contol value x for 5% and 3% diffence [m]
+CONTROL_VALUE_X_05 = 0.01
+CONTROL_VALUE_X_03 = 0.002
+# contol value y for 5% and 3% diffence [m]
+CONTROL_VALUE_Y_05 = 0.01
+CONTROL_VALUE_Y_03 = 0.002
+
+# contol value z to search the target
+CONTROL_VALUE_Z_SEARCHING = 0.02
+
+#############################
+
+#############################
+#
+# Local Log File
+#
+ik_errorlog_filename = '/tmp/ikerror'
 
 def speak(s):
   import os
   if type(s) == types.StringType:
-    os.system('python speak.py "'+s+'"')
+    os.system('spd-say "'+s+'"')
   else:
     print 'error(speak): input is not a string'
 
@@ -86,6 +147,26 @@ def init(host='localhost'):
 
     time.sleep(1)
 
+def getControlValue(comX, comY):
+  # determine the control values
+  dx = 0.
+  dy = 0.
+  if abs(comX)   > 0.05:
+    dx = CONTROL_VALUE_X_05
+  elif abs(comX) > 0.03: # used to be 0.02 
+    dx = CONTROL_VALUE_X_03
+  if comX > 0:
+    dx *= -1
+
+  if abs(comY)   > 0.05:
+    dy = CONTROL_VALUE_Y_05
+  elif abs(comY) > 0.03: # used to be 0.02 
+    dy = CONTROL_VALUE_Y_03
+  if comY < 0:
+    dy *= -1
+
+  return dx,dy
+
 def getCircles(color = 'orange'):
   NUM_TO_TAKE=1
   cvp.ref.get_configuration().activate_configuration_set(color)
@@ -112,9 +193,9 @@ def getCircles(color = 'orange'):
       y += ret.value[maxidx][0]
       r += ret.value[maxidx][2]
   if success_count > 0:
-    x /= success_count*480.0
-    y /= success_count*640.0
-    r /= success_count*640.0
+    x /= success_count*NUM_PIXELS_HEIGHT
+    y /= success_count*NUM_PIXELS_WIDTH
+    r /= success_count*NUM_PIXELS_WIDTH
 
   return x, y, r
 
@@ -169,22 +250,7 @@ def moveTray(mode = 'shuffle'):
         comY += pnt[1] + pnt[3]
       comX = comX / 2.0 / len(lines.value) / 640.0 - 0.5 + 0.01
       comY = comY / 2.0 / len(lines.value) / 480.0 - 0.5 
-  
-      # determine the control values
-      if abs(comX)   > 0.05:
-        dx = 0.01
-      elif abs(comX) > 0.03: # used to be 0.02 
-        dx = 0.002
-      if comX > 0:
-        dx *= -1
-
-      if abs(comY)   > 0.05:
-        dy = 0.01
-      elif abs(comY) > 0.03: # used to be 0.02 
-        dy = 0.002
-      if comY < 0:
-        dy *= -1
-      
+      dx,dy = getControlValue(comX, comY)
       if dx == 0 and dy == 0:
         okCount += 1
         if okCount > 3:
@@ -278,30 +344,10 @@ def loop(numTry=1):
       shuffleCount = 0
       cx = -cx + 0.5
       cy = -cy + 0.5
-      dx = dy = dz = 0.0
-
-      # determine the control values
-      if abs(cx)   > 0.05:
-        dx = 0.01
-      elif abs(cx) > 0.03: # used to be 0.02 
-        dx = 0.002
-      if cx < 0:
-        dx *= -1
-
-      if abs(cy)   > 0.05:
-        dy = 0.01
-      elif abs(cy) > 0.03: # used to be 0.02
-        dy = 0.002
-      if cy < 0:
-        dy *= -1
-
-      #if   r < 0.12:
-      #  dz = -0.01
-      #elif r < 0.15:
-        #dz = -0.003
+      dz = 0.0
+      dx,dy = getControlValue(-cx, cy)
       if r < 0.15:
         dz = -0.01
-      #      #  dz =  0.003
 
       # speak adjusting parameters
 
@@ -504,6 +550,10 @@ def introduction1():
   time.sleep(2)
 
 
+#########1#########2#########3#########4#########5#########6#########7#########8
+#
+#  Main
+#
 if __name__ == '__main__' or __name__ == 'main':
   if len(sys.argv) > 1:
     robotHost = sys.argv[1]
@@ -516,27 +566,19 @@ if __name__ == '__main__' or __name__ == 'main':
   while(1):
     sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_OFF)
     sample.rh_svc.servo('RHAND', sample.SwitchStatus.SWITCH_OFF)
-    sample.servoOn('BODY',doConfirm=False) 
-    time.sleep(1)
-    sample.servoOn('BODY',doConfirm=False) 
-
-    if vs_head != None:
-      loopDetectFace(100)
-      #loopDetectFace(-1)
-      introduction1()
-
     speak('servo on')
     sample.servoOn(doConfirm=False) 
     time.sleep(2)
     sample.servoOn(doConfirm=False) 
     time.sleep(1)
     sample.rh_svc.servo('LHAND', sample.SwitchStatus.SWITCH_ON)
+
     speak('moving to initial pose, for demonstration.')
     sample.lhandOpen(30)
     sample.rhandOpen(30)
     if bodyinfo.modelName == 'PARM':
       sample.goInitial()
-    else:
+    elif bodyinfo.modelName == 'HIRONX':
       sample.setJointAnglesDeg([[0, 0, 55],
                             [-16,-19,-130,-43, 46, 0], 
                             [-16, -20.0, -97, -17, 31, 7.6],
@@ -556,15 +598,21 @@ if __name__ == '__main__' or __name__ == 'main':
     speak('servo off')
     sample.servoOff(doConfirm=False)
     speak('Have a nice day!')
-    #time.sleep(610)
-    #for i in range(10):
 
-    #for i in range(1):
-    #  time.sleep(60)
-    #  if i == 0:
-    #    print 'waited 1 minute'
-    #  else:
-    #    print 'waited %d minutes'%(i+1)
-    #time.sleep(10)
-    #speak('fully rested. run demo?')
+    if vs_head != None:
+      sample.servoOn('BODY',doConfirm=False) 
+      time.sleep(1)
+      sample.servoOn('BODY',doConfirm=False) 
+      loopDetectFace(100)
+      #loopDetectFace(-1)
+      introduction1()
+    else:
+      for i in range(1):
+        time.sleep(SLEEP_ONE_BLOCK)
+        if i == 0:
+          print 'waited 1 minute'
+        else:
+          print 'waited %d minutes'%(i+1)
+      time.sleep(10)
+      speak('fully rested. run demo?')
     #raw_input('run demo? >')
