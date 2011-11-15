@@ -73,17 +73,18 @@ def init(host='localhost'):
 
   # for head
   vs_head = rtm.findRTC("VideoStream0_head")
-  vs_head_svc = Img.CameraCaptureServiceHelper.narrow(vs_head.service('service0'))
-  vs_head.start()
+  if vs_head != None:
+    vs_head_svc = Img.CameraCaptureServiceHelper.narrow(vs_head.service('service0'))
+    vs_head.start()
 
-  cvp_head = rtm.findRTC("CvProcessor0_head")
-  cvp_head_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp_head.service('service0'))
-  cvp_head.start()
+    cvp_head = rtm.findRTC("CvProcessor0_head")
+    cvp_head_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp_head.service('service0'))
+    cvp_head.start()
 
-  rtm.connectPorts(vs_head.port("MultiCameraImages"),   cvp_head.port("MultiCameraImage"))
-  vs_head_svc.take_one_frame()
+    rtm.connectPorts(vs_head.port("MultiCameraImages"),   cvp_head.port("MultiCameraImage"))
+    vs_head_svc.take_one_frame()
 
-  time.sleep(1)
+    time.sleep(1)
 
 def getCircles(color = 'orange'):
   NUM_TO_TAKE=1
@@ -519,9 +520,10 @@ if __name__ == '__main__' or __name__ == 'main':
     time.sleep(1)
     sample.servoOn('BODY',doConfirm=False) 
 
-    loopDetectFace(100)
-    #loopDetectFace(-1)
-    introduction1()
+    if vs_head != None:
+      loopDetectFace(100)
+      #loopDetectFace(-1)
+      introduction1()
 
     speak('servo on')
     sample.servoOn(doConfirm=False) 
