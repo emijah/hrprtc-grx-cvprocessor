@@ -1,4 +1,10 @@
 #!/opt/grx/bin/hrpsyspy
+
+# the z offset  of desk from the robot base
+# !!! PLEASE MEASURE THIS VALUE FIRST !!!
+DEFAULT_BASE_OFFSET_Z = -0.095
+# !!! PLEASE MEASURE THIS VALUE FIRST !!!
+
 import sys
 import time
 import rtm
@@ -13,9 +19,6 @@ import OpenHRP.RobotHardwareServicePackage.RobotState
 import bodyinfo
 
 global conf
-
-#SimulationRun = True
-SimulationRun = False
 
 POSITION_X_LIMIT = 0.375
 
@@ -40,8 +43,8 @@ rateDefault=rate40
 # Parameters
 #
 class DemoConfig:
-  def __init__(self, detectBaseOffset = -0.095):
-    self.baseOffsetZ          = detectBaseOffset
+  def __init__(self, baseOffsetZ = DEFAULT_BASE_OFFSET_Z):
+    self.baseOffsetZ          = baseOffsetZ
     self.handLengthZ          = 0.103
     #self.trayHandleZ          = 0.080
     #self.gripDepthZ           = 0.050
@@ -78,9 +81,9 @@ class DemoConfig:
     # contol value z to search the target
     self.controlValueZ        = 0.02
 
-    self.update(detectBaseOffset)
+    self.update(baseOffsetZ)
 
-  def update(self, detectBaseOffset):
+  def update(self, baseOffsetZ):
     self.lowerLimitX          = 0.3
     self.upperLimitX          = 0.5
     self.lowerLimitYL         =-0.05
@@ -263,7 +266,7 @@ def moveTray(mode = 'shuffle'):
   searchDirec = -1
   searchDirec_x = -1
   while 1:
-    if not SimulationRun:
+    if cvp != None:
       cvp.ref.get_configuration().activate_configuration_set('green')
       vs_svc.take_one_frame()
       time.sleep(0.1)
@@ -341,6 +344,7 @@ def moveTray(mode = 'shuffle'):
   sample.moveRelativeL(dx=conf.cameraOffsetX, dw=math.pi/2, rate=rate40)
 
 def loop(numTry=1):
+  global cvp
   count = 0
   retryCount = 0
   shuffleCount = 0
@@ -355,7 +359,7 @@ def loop(numTry=1):
     x,y,z,roll,pitch,yaw = sample.getCurrentConfiguration(sample.armL_svc)
     print "\n( x, y, z, r, p, w) = %6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f  unit:[m]"%(x, y, z, roll, pitch, yaw)
 
-    if not SimulationRun:
+    if cvp != None:
       cx_orange, cy_orange, r_orange = getCircles('orange')
       cx_blue, cy_blue, r_blue = getCircles('blue')
 
