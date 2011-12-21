@@ -245,7 +245,7 @@ def init_gui():
   frm.show()
 
 
-def init(host='localhost', refSuffix=None):
+def init(host='localhost', refSuffix=""):
   global vs, vs_svc, cvp, cvp_svc
   if robotHost != None:
     print 'robot host = '+robotHost
@@ -253,7 +253,7 @@ def init(host='localhost', refSuffix=None):
         '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
     rtm.initCORBA()
 
-  if refSuffix != None:
+  if refSuffix != None && refSuffix != "":
     refSuffix = '_'+refSuffix
     print 'suffix = '+refSuffix
   vs = rtm.findRTC("VideoStream0"+refSuffix)
