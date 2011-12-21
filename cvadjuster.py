@@ -13,8 +13,6 @@ from javax.swing.border import *
 
 from _SDOPackage import *
 
-FRAME_IDX=0
-
 mode = 'circle'
 defaultProp = {}
 def loadDefaultValue(fname):
@@ -280,10 +278,12 @@ def loop():
     time.sleep(1) # ThinkPad X200
     if mode == 'circle':
       circles = OpenHRP.darray3SeqHolder()
-      cvp_svc.HoughCircles(FRAME_IDX, circles)
+      cvp_svc.HoughCircles(0, circles)
+      cvp_svc.HoughCircles(1, circles)
     else:
       lines   = OpenHRP.iarray4SeqHolder()
-      cvp_svc.HoughLinesP(FRAME_IDX, lines)
+      cvp_svc.HoughLinesP(0, lines)
+      cvp_svc.HoughLinesP(1, lines)
 
 #####
 # Data Conversion
