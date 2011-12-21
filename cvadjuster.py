@@ -245,7 +245,7 @@ def init_gui():
   frm.show()
 
 
-def init(host='localhost'):
+def init(host='localhost', ref_suffix=''):
   global vs, vs_svc, cvp, cvp_svc
   if robotHost != None:
     print 'robot host = '+robotHost
@@ -253,11 +253,14 @@ def init(host='localhost'):
         '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
     rtm.initCORBA()
 
-  vs = rtm.findRTC("VideoStream0")
+  if ref_suffix:
+    ref_suffix = '_'+ref_suffix
+    print 'suffix = '+ref_suffix
+  vs = rtm.findRTC("VideoStream0"+ref_suffix)
   vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
   vs.start()
 
-  cvp = rtm.findRTC("CvProcessor0")
+  cvp = rtm.findRTC("CvProcessor0"+ref_suffix)
   cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
   cvp.start()
 
@@ -344,20 +347,37 @@ def printRtcConfiguration( rtc ) :
       print '%s : %s = %s' % ( cs.id, key, conf_set_dict[cs.id][key] )
 #####
 
+def usage(com):
+    print 'Usage:'
+    print com + ' --host=<HOSTNAME> --mode=<DETECT_MODE> --config=<CONFIG_FILE> --suffix=<REF_SUFFIX>'
+    print '  HOSTNAME = hostname of NameService [localhost, hiro015, etc..]'
+    print '  DETECT_MODE = [circle, lines]' 
+    print '  CONFIG_FILE = settings of each threshold'
+    print '  REF_SUFFIX  = the suffix for rtc reference [ head, hand , etc..]'
 
+import getopt
 if __name__ == '__main__' or __name__ == 'main':
-  if len(sys.argv) > 3:
-    robotHost = sys.argv[1]
-    loadDefaultValue(sys.argv[2])
-    mode = sys.argv[3]
-  elif len(sys.argv) > 2:
-    robotHost = sys.argv[1]
-    loadDefaultValue(sys.argv[2])
-  elif len(sys.argv) > 1:
-    robotHost = sys.argv[1]
-  else:
-    robotHost = None
-  init( robotHost )
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'r:m:c:s:h', ['host=', 'mode=', 'config=', 'suffix=', 'help']) 
+  except getopt.GetoptError:
+    usage(sys.argv[0])
+    sys.exit(2)
+
+  robotHost = None
+  refSuffix = None
+  for opt, arg in opts:
+    if opt in ("-h", "--help"):
+      usage(sys.argv[0])
+      sys.exit()
+    elif opt in ('-r', '--host'):
+      robotHost = arg 
+    elif opt in ('-m', '--mode'):
+      mode = arg
+    elif opt in ('-c', '--config'):
+      loadDefaultValue(argv)
+    elif opt in ('-s', '--suffix'):
+      refSuffix = arg
+  init( robotHost , refSuffix)
   cvp.ref.get_configuration().activate_configuration_set('orange')
   ### YY ###
   init_gui()
