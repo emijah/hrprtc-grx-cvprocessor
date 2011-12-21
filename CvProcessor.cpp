@@ -166,8 +166,10 @@ RTC::ReturnCode_t CvProcessor::onInitialize()
     bindParameter("HoughLinesP_min_line_length", m_lines_min_length, "30");
     bindParameter("HoughLinesP_max_line_gap", m_lines_max_gap, "10");
 
-    cvNamedWindow("src", CV_WINDOW_AUTOSIZE);
-    cvNamedWindow("dst", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("src0", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("dst0", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("src1", CV_WINDOW_AUTOSIZE);
+    cvNamedWindow("dst1", CV_WINDOW_AUTOSIZE);
 
     return RTC::RTC_OK;
 }
@@ -200,8 +202,10 @@ RTC::ReturnCode_t CvProcessor::onInitialize()
 
 RTC::ReturnCode_t CvProcessor::onDeactivated(RTC::UniqueId ec_id)
 {
-    cvDestroyWindow("src");
-    cvDestroyWindow("dst");
+    cvDestroyWindow("src0");
+    cvDestroyWindow("dst0");
+    cvDestroyWindow("src1");
+    cvDestroyWindow("dst1");
     cvReleaseImage(&m_frame);
     cvReleaseImage(&m_hsv_frame);
     cvReleaseImage(&m_thresholded);
@@ -220,102 +224,121 @@ RTC::ReturnCode_t CvProcessor::onExecute(RTC::UniqueId ec_id)
     return RTC::RTC_OK;
 }
 
-void CvProcessor::HoughCircles()
+void CvProcessor::HoughCircles(int id)
 {
+    if ( m_MultiCameraImage.data.image_seq.length() <= id )
+        return;
+
     CvScalar hsv_min = cvScalar(m_H_min, m_S_min, m_V_min, 0);
     CvScalar hsv_max = cvScalar(m_H_max, m_S_max, m_V_max, 0);
 
-    for (int i=0; i<m_MultiCameraImage.data.image_seq.length(); i++) {
-        Img::ImageData& idat = m_MultiCameraImage.data.image_seq[i].image;
-        if (m_frame == 0) {
-            m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
-        }
-        for (int row=0; row<idat.height; ++row) {
-            for (int col=0; col<idat.width; ++col) {
-                for (int k=0; k<3; ++k) {
-                    ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
-                        = idat.raw_data[(row * idat.width + col)*3+k];
-                }
+    Img::ImageData& idat = m_MultiCameraImage.data.image_seq[id].image;
+    if (m_frame == 0) {
+        m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
+    }
+    for (int row=0; row<idat.height; ++row) {
+        for (int col=0; col<idat.width; ++col) {
+            for (int k=0; k<3; ++k) {
+                ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
+                    = idat.raw_data[(row * idat.width + col)*3+k];
             }
         }
-        cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
-        cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
-
-        m_circles = cvHoughCircles(m_thresholded, m_storage, CV_HOUGH_GRADIENT, 2, m_thresholded->height/4, m_param1, m_param2, m_CircleRadius_min, m_CircleRadius_max);
-        for (int j=0; j<m_circles->total; j++) {
-            float* p = (float*)cvGetSeqElem( m_circles, j );
-            cvCircle( m_frame, cvPoint(cvRound(p[0]),cvRound(p[1])), 3,             CV_RGB(0,255,0), -1, 8, 0 );
-            cvCircle( m_frame, cvPoint(cvRound(p[0]),cvRound(p[1])), cvRound(p[2]), CV_RGB(255,0,0),  3, 8, 0 );
-        }
-        cvShowImage("src", m_frame);
-        cvShowImage("dst", m_thresholded);
-        char c = cvWaitKey(10);
     }
+    cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
+    cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
+
+    m_circles = cvHoughCircles(m_thresholded, m_storage, CV_HOUGH_GRADIENT, 2, m_thresholded->height/4, m_param1, m_param2, m_CircleRadius_min, m_CircleRadius_max);
+    for (int j=0; j<m_circles->total; j++) {
+        float* p = (float*)cvGetSeqElem( m_circles, j );
+        cvCircle( m_frame, cvPoint(cvRound(p[0]),cvRound(p[1])), 3,             CV_RGB(0,255,0), -1, 8, 0 );
+        cvCircle( m_frame, cvPoint(cvRound(p[0]),cvRound(p[1])), cvRound(p[2]), CV_RGB(255,0,0),  3, 8, 0 );
+    }
+    if (id == 0)
+    {
+        cvShowImage("src0", m_frame);
+        cvShowImage("dst0", m_thresholded);
+    }
+    else
+    {
+        cvShowImage("src1", m_frame);
+        cvShowImage("dst1", m_thresholded);
+    }
+    char c = cvWaitKey(10);
 }
 
-void CvProcessor::HoughLinesP()
+void CvProcessor::HoughLinesP(int id)
 {
+    if ( m_MultiCameraImage.data.image_seq.length() <= id )
+        return;
+
     CvScalar hsv_min = cvScalar(m_H_min, m_S_min, m_V_min, 0);
     CvScalar hsv_max = cvScalar(m_H_max, m_S_max, m_V_max, 0);
 
-    for (int i=0; i<m_MultiCameraImage.data.image_seq.length(); i++) {
-        Img::ImageData& idat = m_MultiCameraImage.data.image_seq[i].image;
-        if (m_frame == 0) {
-            m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
-        }
-        for (int row=0; row<idat.height; ++row) {
-            for (int col=0; col<idat.width; ++col) {
-                for (int k=0; k<3; ++k) {
-                    ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
-                        = idat.raw_data[(row * idat.width + col)*3+k];
-                }
+    Img::ImageData& idat = m_MultiCameraImage.data.image_seq[id].image;
+    if (m_frame == 0) {
+        m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
+    }
+    for (int row=0; row<idat.height; ++row) {
+        for (int col=0; col<idat.width; ++col) {
+            for (int k=0; k<3; ++k) {
+                ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
+                    = idat.raw_data[(row * idat.width + col)*3+k];
             }
         }
-        cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
-        cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
-        cv::Mat mat(m_thresholded); 
-        cv::Mat mat_frame(m_frame); 
-        cv::HoughLinesP(mat, m_lines, m_lines_rho, m_lines_theta*3.14/180, m_lines_threshold, m_lines_min_length, m_lines_max_gap);
-        for (int j=0; j<m_lines.size(); j++) {
-	    cv::line(mat_frame, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
-        }
-        cvShowImage("src", m_frame);
-        cvShowImage("dst", m_thresholded);
-        char c = cvWaitKey(10);
     }
+    cvCvtColor(m_frame, m_hsv_frame, CV_BGR2HSV);
+    cvInRangeS(m_hsv_frame, hsv_min, hsv_max, m_thresholded);
+    cv::Mat mat(m_thresholded);
+    cv::Mat mat_frame(m_frame);
+    cv::HoughLinesP(mat, m_lines, m_lines_rho, m_lines_theta*3.14/180, m_lines_threshold, m_lines_min_length, m_lines_max_gap);
+    for (int j=0; j<m_lines.size(); j++) {
+        cv::line(mat_frame, cvPoint(m_lines[j][0], m_lines[j][1]), cvPoint(m_lines[j][2], m_lines[j][3]), cv::Scalar(0, 0, 255), 3, 8);
+    }
+    if (id == 0)
+    {
+        cvShowImage("src0", m_frame);
+        cvShowImage("dst0", m_thresholded);
+    }
+    else
+    {
+        cvShowImage("src1", m_frame);
+        cvShowImage("dst1", m_thresholded);
+    }
+    char c = cvWaitKey(10);
 }
 
-void CvProcessor::detectFaces(bool doSaveImage)
+void CvProcessor::detectFaces(int id, bool doSaveImage)
 {
+    if ( m_MultiCameraImage.data.image_seq.length() <= id )
+        return;
+
     const char *cascade_name = "haarcascade_frontalface_default.xml";
 
-    for (int i=0; i<m_MultiCameraImage.data.image_seq.length(); i++) {
-        Img::ImageData& idat = m_MultiCameraImage.data.image_seq[i].image;
-        if (m_frame == 0) {
-            m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
-            m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
-        }
-        for (int row=0; row<idat.height; ++row) {
-            for (int col=0; col<idat.width; ++col) {
-                for (int k=0; k<3; ++k) {
-                    ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
-                        = idat.raw_data[(row * idat.width + col)*3+k];
-                }
+    Img::ImageData& idat = m_MultiCameraImage.data.image_seq[id].image;
+    if (m_frame == 0) {
+        m_frame       = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_hsv_frame   = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 3);
+        m_thresholded = cvCreateImage(cvSize(idat.width, idat.height), IPL_DEPTH_8U, 1);
+    }
+    for (int row=0; row<idat.height; ++row) {
+        for (int col=0; col<idat.width; ++col) {
+            for (int k=0; k<3; ++k) {
+                ((unsigned char *)(m_frame->imageData))[row * m_frame->widthStep + col*3 + k]
+                    = idat.raw_data[(row * idat.width + col)*3+k];
             }
         }
     }
 
     CvHaarClassifierCascade *cascade = 0;
     static CvScalar colors[] = {
-      {{0, 0, 255}}, {{0, 128, 255}},
-      {{0, 255, 255}}, {{0, 255, 0}},
-      {{255, 128, 0}}, {{255, 255, 0}},
-      {{255, 0, 0}}, {{255, 0, 255}}
+        {{0, 0, 255}}, {{0, 128, 255}},
+        {{0, 255, 255}}, {{0, 255, 0}},
+        {{255, 128, 0}}, {{255, 255, 0}},
+        {{255, 0, 0}}, {{255, 0, 255}}
     };
 
     IplImage *src_gray;
@@ -327,40 +350,43 @@ void CvProcessor::detectFaces(bool doSaveImage)
     m_faces = cvHaarDetectObjects (src_gray, cascade, m_storage, 1.11, 4, 0, cvSize (40, 40));
 
     // save face image
-    if (doSaveImage && m_faces ->total > 0)
+    if (doSaveImage && m_faces->total > 0)
     {
-      CvRect *r = (CvRect *) cvGetSeqElem (m_faces, 0);
-      IplImage *face;
-      face = cvCreateImage (cv::Size(r->width, r->height), IPL_DEPTH_8U, 3);
-      for (int row=0; row<r->width; ++row) {
-        for (int col=0; col<r->height; ++col) {
-          for (int k=0; k<3; ++k) {
-            face->imageData[row * face->widthStep + col*3 + k]
-                  = m_frame->imageData[(r->y+row) * m_frame->widthStep + (r->x + col)*3 + k];
-          }
+        CvRect *r = (CvRect *) cvGetSeqElem (m_faces, 0);
+        IplImage *face;
+        face = cvCreateImage (cv::Size(r->width, r->height), IPL_DEPTH_8U, 3);
+        for (int row=0; row<r->width; ++row) {
+            for (int col=0; col<r->height; ++col) {
+                for (int k=0; k<3; ++k) {
+                    face->imageData[row * face->widthStep + col*3 + k]
+                        = m_frame->imageData[(r->y+row) * m_frame->widthStep + (r->x + col)*3 + k];
+                }
+            }
         }
-      }
-      time_t now;
-      struct tm *date;
-      time(&now);
-      date = localtime(&now);
-      char s[100];
-      strftime(s,100,"face_%Y%m%d%H%M%S.jpg",date);
-      cvSaveImage(s, face);
+        time_t now;
+        struct tm *date;
+        time(&now);
+        date = localtime(&now);
+        char s[100];
+        strftime(s,100,"face_%Y%m%d%H%M%S.jpg",date);
+        cvSaveImage(s, face);
     }
 
     // draw circles around face
     for (int i = 0; i < (m_faces ? m_faces->total : 0); i++) {
-      CvRect *r = (CvRect *) cvGetSeqElem (m_faces, i);
-      CvPoint center;
-      int radius;
-      center.x = cvRound (r->x + r->width * 0.5);
-      center.y = cvRound (r->y + r->height * 0.5);
-      radius = cvRound ((r->width + r->height) * 0.25);
-      cvCircle (m_frame, center, radius, colors[i % 8], 3, 8, 0);
+        CvRect *r = (CvRect *) cvGetSeqElem (m_faces, i);
+        CvPoint center;
+        int radius;
+        center.x = cvRound (r->x + r->width * 0.5);
+        center.y = cvRound (r->y + r->height * 0.5);
+        radius = cvRound ((r->width + r->height) * 0.25);
+        cvCircle (m_frame, center, radius, colors[i % 8], 3, 8, 0);
     }
 
-    cvShowImage("src", m_frame);
+    if (id == 0)
+        cvShowImage("src0", m_frame);
+    else
+        cvShowImage("src1", m_frame);
 
     char c = cvWaitKey(10);
 }

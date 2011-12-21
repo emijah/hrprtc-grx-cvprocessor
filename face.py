@@ -21,6 +21,7 @@ import bodyinfo
 global conf
 
 POSITION_X_LIMIT = 0.375
+FRAME_IDX=0
 
 #############################
 #
@@ -187,7 +188,7 @@ def getCircles(color = 'orange'):
   for i in range(NUM_TO_TAKE):
     vs_svc.take_one_frame()
     time.sleep(0.1)
-    cvp_svc.HoughCircles(ret)
+    cvp_svc.HoughCircles(FRAME_IDX, ret)
     if len(ret.value) > 0:
       success_count += 1
       maxval = 0 
@@ -270,7 +271,7 @@ def moveTray(mode = 'shuffle'):
       cvp.ref.get_configuration().activate_configuration_set('green')
       vs_svc.take_one_frame()
       time.sleep(0.1)
-      cvp_svc.HoughLinesP(lines)
+      cvp_svc.HoughLinesP(FRAME_IDX, lines)
       linesValue = lines.value
     else:
       linesValue = [[conf.widthView/2.0, conf.heightView/2.0, conf.widthView/2.0, conf.heightView/2.0]]
@@ -511,7 +512,7 @@ def getNearestFace(doSaveImage=False):
   for i in range(NUM_TO_TAKE):
     vs_head_svc.take_one_frame()
     time.sleep(0.1)
-    cvp_head_svc.detectFaces(ret, doSaveImage)
+    cvp_head_svc.detectFaces(FRAME_IDX, ret, doSaveImage)
     if len(ret.value) > 0:
       success_count += 1
       maxval = 0 
