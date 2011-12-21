@@ -245,7 +245,7 @@ def init_gui():
   frm.show()
 
 
-def init(host='localhost', ref_suffix=''):
+def init(host='localhost', refSuffix=None):
   global vs, vs_svc, cvp, cvp_svc
   if robotHost != None:
     print 'robot host = '+robotHost
@@ -253,14 +253,14 @@ def init(host='localhost', ref_suffix=''):
         '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
     rtm.initCORBA()
 
-  if ref_suffix:
-    ref_suffix = '_'+ref_suffix
-    print 'suffix = '+ref_suffix
-  vs = rtm.findRTC("VideoStream0"+ref_suffix)
+  if refSuffix != None:
+    refSuffix = '_'+refSuffix
+    print 'suffix = '+refSuffix
+  vs = rtm.findRTC("VideoStream0"+refSuffix)
   vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
   vs.start()
 
-  cvp = rtm.findRTC("CvProcessor0"+ref_suffix)
+  cvp = rtm.findRTC("CvProcessor0"+refSuffix)
   cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
   cvp.start()
 
