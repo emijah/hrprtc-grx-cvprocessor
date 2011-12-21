@@ -253,7 +253,9 @@ def init(host='localhost', refSuffix=""):
         '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
     rtm.initCORBA()
 
-  if refSuffix != None and refSuffix != "":
+  if refSuffix == None:
+     refSuffix = ''
+  elif refSuffix != '':
     refSuffix = '_'+refSuffix
     print 'suffix = '+refSuffix
   vs = rtm.findRTC("VideoStream0"+refSuffix)
@@ -364,7 +366,7 @@ if __name__ == '__main__' or __name__ == 'main':
     sys.exit(2)
 
   robotHost = None
-  refSuffix = None
+  refSuffix = ""
   for opt, arg in opts:
     if opt in ("-h", "--help"):
       usage(sys.argv[0])
