@@ -10,8 +10,8 @@ module OpenHRP
 
   interface CvProcessorService
   {
-    unsigned long HoughCircles(out darray3Seq circles);
-    unsigned long HoughLinesP(out iarray4Seq lines);
-    unsigned long detectFaces(out darray3Seq faces, in boolean doSaveImage);
+    unsigned long HoughCircles(in long id, out darray3Seq circles);
+    unsigned long HoughLinesP(in long id, out iarray4Seq lines);
+    unsigned long detectFaces(in long id,out darray3Seq faces, in boolean doSaveImage);
   };
 };

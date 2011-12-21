@@ -146,15 +146,15 @@ private:
     double m_lines_threshold;
     double m_lines_min_length;
     double m_lines_max_gap;
-    
+
 
 public:
     CvSeq* m_circles;
     std::vector<cv::Vec4i> m_lines;
     CvSeq* m_faces;
-    void HoughCircles();
-    void HoughLinesP();
-    void detectFaces(bool doSaveImage);
+    void HoughCircles(int id);
+    void HoughLinesP(int id);
+    void detectFaces(int id, bool doSaveImage);
 };
 
 

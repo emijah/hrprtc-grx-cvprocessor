@@ -26,9 +26,9 @@ CvProcessorService_impl::~CvProcessorService_impl()
 /*
  * Methods corresponding to IDL attributes and operations
  */
-::CORBA::ULong CvProcessorService_impl::HoughCircles(OpenHRP::darray3Seq_out circles)
+::CORBA::ULong CvProcessorService_impl::HoughCircles(::CORBA::Long id, OpenHRP::darray3Seq_out circles)
 {
-    m_comp->HoughCircles();
+    m_comp->HoughCircles(id);
     circles = new OpenHRP::darray3Seq();
     circles->length(m_comp->m_circles->total);
     for (int i=0; i<m_comp->m_circles->total; i++) {
@@ -40,9 +40,9 @@ CvProcessorService_impl::~CvProcessorService_impl()
     return 0;
 }
 
-::CORBA::ULong CvProcessorService_impl::HoughLinesP(OpenHRP::iarray4Seq_out lines)
+::CORBA::ULong CvProcessorService_impl::HoughLinesP(::CORBA::Long id, OpenHRP::iarray4Seq_out lines)
 {
-    m_comp->HoughLinesP();
+    m_comp->HoughLinesP(id);
     lines = new OpenHRP::iarray4Seq();
     lines->length(m_comp->m_lines.size());
     for (int i=0; i<m_comp->m_lines.size(); i++) {
@@ -53,9 +53,9 @@ CvProcessorService_impl::~CvProcessorService_impl()
     return 0;
 }
 
-::CORBA::ULong CvProcessorService_impl::detectFaces(OpenHRP::darray3Seq_out faces, bool doSaveImage)
+::CORBA::ULong CvProcessorService_impl::detectFaces(::CORBA::Long id, OpenHRP::darray3Seq_out faces, ::CORBA::Boolean doSaveImage)
 {
-    m_comp->detectFaces(doSaveImage);
+    m_comp->detectFaces(id, doSaveImage);
     faces = new OpenHRP::darray3Seq();
     faces->length(m_comp->m_faces->total);
     for (int i=0; i<m_comp->m_faces->total; i++) {
