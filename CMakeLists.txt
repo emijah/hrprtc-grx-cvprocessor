@@ -43,7 +43,7 @@ set_target_properties(${comp_name} PROPERTIES PREFIX "")
 
 if(NOT QNXNTO)
   add_executable(${comp_name}Comp ${comp_name}Comp.cpp ${comp_sources})
-  target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} cv cvaux highgui)
+  target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} cv cvaux highgui cxcore)
   set(target ${comp_name} ${comp_name}Comp)
 endif()
 
