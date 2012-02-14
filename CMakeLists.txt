@@ -8,50 +8,44 @@ endif()
 ####
 ## settings for OpenRTM and OpenHRP
 ##
-include(FindPkgConfig)
-include(CheckIncludeFiles)
-find_package(OpenRTM REQUIRED)
-find_package(OpenHRP REQUIRED)
-include_directories(${OPENRTM_INCLUDE_DIRS})
-link_directories(${OPENRTM_LIBRARY_DIRS})
-include_directories(${OPENHRP_INCLUDE_DIRS})
-link_directories(${OPENHRP_LIBRARY_DIRS})
-include_directories(/opt/grx/include)
+if(NOT QNXNTO)
+  include(FindPkgConfig)
+  include(CheckIncludeFiles)
+  find_package(OpenRTM REQUIRED)
+  find_package(OpenHRP REQUIRED)
+  include_directories(${OPENRTM_INCLUDE_DIRS})
+  link_directories(${OPENRTM_LIBRARY_DIRS})
+  include_directories(${OPENHRP_INCLUDE_DIRS})
+  link_directories(${OPENHRP_LIBRARY_DIRS})
+  include_directories(/opt/grx/include)
 
-if(QNXNTO)
-  include_directories(/usr/pkg/include)
-else()
   if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__LINUX__" )
   endif()
-endif(QNXNTO)
 
-include(GenerateStubSkel)
+  include(GenerateStubSkel)
 
-set(comp_name CvProcessor)
-set(comp_sources ${comp_name}.cpp)
+  set(comp_name CvProcessor)
+  set(comp_sources ${comp_name}.cpp)
 
-generate_hrpsys_stub_skel_wrapper(Img)
-set(comp_sources ${comp_sources} ImgSK.cc ImgDynSK.cc)
+  generate_hrpsys_stub_skel_wrapper(Img)
+  set(comp_sources ${comp_sources} ImgSK.cc ImgDynSK.cc)
 
-generate_stub_skel(${comp_name}Service)
-set(comp_sources ${comp_sources} ${comp_name}Service_impl.cpp ${comp_name}ServiceSk.cpp)
+  generate_stub_skel(${comp_name}Service)
+  set(comp_sources ${comp_sources} ${comp_name}Service_impl.cpp ${comp_name}ServiceSk.cpp)
 
-add_library(${comp_name} SHARED ${comp_sources})
-target_link_libraries(${comp_name} ${OPENHRP_LIBRARIES})
-set_target_properties(${comp_name} PROPERTIES PREFIX "")
+  add_library(${comp_name} SHARED ${comp_sources})
+  target_link_libraries(${comp_name} ${OPENHRP_LIBRARIES})
+  set_target_properties(${comp_name} PROPERTIES PREFIX "")
 
-if(NOT QNXNTO)
   add_executable(${comp_name}Comp ${comp_name}Comp.cpp ${comp_sources})
   target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} cv cvaux highgui cxcore)
   set(target ${comp_name} ${comp_name}Comp)
+  
+  set(PERMISSIONS_755 OWNER_READ OWNER_WRITE OWNER_EXECUTE  GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(FILES cvadjuster.py DESTINATION script PERMISSIONS ${PERMISSIONS_755})
+  install(TARGETS ${target}
+    RUNTIME DESTINATION bin CONFIGURATIONS Release Debug
+    LIBRARY DESTINATION lib CONFIGURATIONS Release Debug
+  )
 endif()
-
-set(PERMISSIONS_755 OWNER_READ OWNER_WRITE OWNER_EXECUTE  GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-install(FILES cvadjuster.py DESTINATION script PERMISSIONS ${PERMISSIONS_755})
-
-install(TARGETS ${target}
-  RUNTIME DESTINATION bin CONFIGURATIONS Release Debug
-  LIBRARY DESTINATION lib CONFIGURATIONS Release Debug
-)
