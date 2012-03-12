@@ -1,0 +1,5 @@
+CvProcessor (0.5.8) lucid maverick; urgency=low
+
+  * Change the dependency (libcv-dev -> libcv??, libhighgui-dev -> libhighgui4, libcvaux-dev -> X)
+
+ -- kawasumi <kawasumi@generalrobotix.com>  Tue, 14 Feb 2012 15:29:00 +0900

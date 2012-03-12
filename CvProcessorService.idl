@@ -1,0 +1,17 @@
+// -*- mode: idl; indent-tabs-mode: t; tab-width: 4; c-basic-offset: 4; -*-
+
+
+module OpenHRP
+{
+  typedef double darray3[3];
+  typedef long   iarray4[4];
+  typedef sequence<darray3> darray3Seq;
+  typedef sequence<iarray4> iarray4Seq;
+
+  interface CvProcessorService
+  {
+    unsigned long HoughCircles(in long id, out darray3Seq circles);
+    unsigned long HoughLinesP(in long id, out iarray4Seq lines);
+    unsigned long detectFaces(in long id,out darray3Seq faces, in boolean doSaveImage);
+  };
+};
