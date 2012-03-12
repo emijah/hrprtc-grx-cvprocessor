@@ -141,6 +141,9 @@ RTC::ReturnCode_t CvProcessor::onInitialize()
     m_CvProcessorServicePort.registerProvider("service0", "CvProcessorService", m_service0);
     addPort(m_CvProcessorServicePort);
 
+    RTC::Manager& rtcManager = RTC::Manager::instance();
+    std::cout << "corba.nameservers: " << rtcManager.getConfig()["corba.nameservers"] << std::endl;
+
     m_frame = 0;
     m_hsv_frame = 0;
     m_thresholded = 0;
