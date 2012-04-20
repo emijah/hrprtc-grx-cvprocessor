@@ -35,7 +35,7 @@ rate30 = 30
 rate20 = 20
 rate10 = 10
 rate5  = 5
-rateDefault=rate40
+rateDefault=rate20
 
 #############################
 
@@ -62,6 +62,7 @@ class DemoConfig:
     self.pullTrayX            = 0.135 #<- based on initial position of moveTray
     self.pushTrayX            = 0.20
     self.ballClearance        = 0.05
+    self.offsetForSearchBall  = 0.06
 
     # number of pixels
     self.heightView           = 480
@@ -130,12 +131,12 @@ def init(host='localhost'):
   sample.init(host)
 
   # for hand
-  vs = rtm.findRTC("VideoStream0")
+  vs = rtm.findRTC("VideoStream0_hand")
   if vs != None:
     vs_svc = Img.CameraCaptureServiceHelper.narrow(vs.service('service0'))
     vs.start()
 
-    cvp = rtm.findRTC("CvProcessor0")
+    cvp = rtm.findRTC("CvProcessor0_hand")
     cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
     cvp.start()
 
@@ -398,7 +399,7 @@ def loop(numTry=1):
 
       # speak adjusting parameters
 
-      if dx == 0 and dy == 0 and (dz <= conf.lowerLimitZ or dz == 0):
+      if dx == 0 and dy == 0 and dz == 0:
         count += 1
       elif count > 1:
         count -= 1
@@ -451,36 +452,10 @@ def loop(numTry=1):
       
     rate = rateDefault
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
-    if 0: # irex 2011 for hiro
-      if (x+dx<POSITION_X_LIMIT and dx<0) or (conf.upperLimitX<x+dx and 0<dx):
-        print "x limit"
-        speak('return to initial position')
-        rate = rate10
-        dx = x0 - x
-        dy = y0 - y
-        dz = z0 - z
-      else:
-        if (y+dy<conf.lowerLimitYL and dy<0) or (conf.upperLimitYL<y+dy and 0<dy):
-          print "y limit"
-          speak('limited wai movement')
-          dy = 0
-        if z+dz<conf.lowerLimitZ and dz<0:
-          print "z lower limit"
-          #speak('limited zed movement')
-          dz = conf.lowerLimitZ - z
-        elif conf.upperLimitZ<z+dz and 0<dz:
-          print "z upper limit"
-          dz = conf.upperLimitZ - z
-
-      if sample.moveL(x+dx, y+dy, z+dz,0, -math.pi/2, 0, rate=rateDefault) < 0:
-        print "ik error."
-        speak('eye kay error.')
-        logIkErrorPos(x+dx, y+dy, z+dz,0, -math.pi/2, 0)
-
     # limit motion
     dx,inLimitX = doLimit(x, dx, conf.pullTrayX + conf.trayHandleClearanceX, conf.upperLimitX, 'x', 'ecks')
     dy,inLimitY = doLimit(y, dy, conf.lowerLimitYL, conf.upperLimitYL, 'y', 'wai')
-    dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ,  conf.upperLimitZ,  'z', None)
+    dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ + conf.offsetForSearchBall,  conf.upperLimitZ,  'z', None)
 
     if not inLimitX:
       limitHitX = limitHitX + 1
