@@ -52,17 +52,18 @@ class DemoConfig:
     self.trayHandleZ          = 0.110
     self.gripDepthZ           = 0.044
     self.ballShuffleT         = 3
-    self.trayHandleClearanceX = 0.08
     self.searchMovementX      = 0.010	
     self.ballGripAdjX         = 0.003
     self.dropMarginY          = 0.0
     # the x,z displacement to shuffle tray in absolute value [m]
+    self.shuffleTrayDZ        = 0.06
     self.shuffleTrayDX        = 0.015
     # the absolute position x to push/pull tray [m]
-    self.pullTrayX            = 0.135 #<- based on initial position of moveTray
-    self.pushTrayX            = 0.20
+    self.pullTrayXFromLimit   = 0.05 #<- based on initial position of moveTray
+    self.pushTrayXFromLimit   = 0.12
     self.ballClearance        = 0.045
     self.offsetZForSearchBall = 0.06
+    self.trayHandleClearanceX = 0.08
 
     # number of pixels
     self.heightView           = 480
@@ -323,19 +324,20 @@ def moveTray(mode = 'shuffle'):
   # grasp & do the action
   sample.lhandClose()
   time.sleep(0.3)
+  x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
+  if -math.pi < yaw1 < -math.pi * 0.9:
+    yaw1 = -3.1415
+  elif math.pi*0.9 < yaw1 < math.pi:
+    yaw1 = 3.1415
   if mode == 'pull':
-    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rate10)
+    sample.moveL(conf.lowerLimitX + conf.pullTrayXFromLimit,y1,z1,roll1,pitch1,yaw1,rate=rate10)
   elif mode == 'shuffle':
-    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.35,y1,z1,roll1,pitch1,yaw1,rate=rateDefault)
-
-    sample.moveRelativeL(dx= conf.shuffleTrayDX, dz= 0.06, rate=rate5)
+    sample.moveL(conf.lowerLimitX + conf.pullTrayXFromLimit,y1,z1,roll1,pitch1,yaw1,rate=rate10)
+    sample.moveRelativeL(dx= conf.shuffleTrayDX, dz= conf.shuffleTrayDZ, rate=rate5)
     time.sleep(conf.ballShuffleT)
-    sample.moveRelativeL(dx=-conf.shuffleTrayDX, dz=-0.06, rate=rate5)
+    sample.moveRelativeL(dx=-conf.shuffleTrayDX, dz=-conf.shuffleTrayDZ, rate=rate5)
   elif mode == 'push':
-    x1,y1,z1,roll1,pitch1,yaw1 = sample.getCurrentConfiguration(sample.armL_svc)
-    sample.moveL(0.42,y1,z1,roll1,pitch1,yaw1, rate=rate10)
+    sample.moveL(conf.lowerLimitX + conf.pushTrayXFromLimit,y1,z1,roll1,pitch1,yaw1, rate=rate10)
 
   # open & up & rotate
   sample.lhandOpen()
@@ -452,18 +454,12 @@ def loop(numTry=1):
     rate = rateDefault
     print "(dx,dy,dz) = %6.3f,%6.3f,%6.3f  unit:[m]"%(dx, dy, dz)
     # limit motion
-    dx,inLimitX = doLimit(x, dx, conf.pullTrayX + conf.trayHandleClearanceX, conf.upperLimitX, 'x', 'ecks')
+    dx,inLimitX = doLimit(x, dx, conf.lowerLimitX + conf.pullTrayXFromLimit, conf.upperLimitX, 'x', 'ecks')
     dy,inLimitY = doLimit(y, dy, conf.lowerLimitYL, conf.upperLimitYL, 'y', 'wai')
     dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ + conf.offsetZForSearchBall,  conf.upperLimitZ,  'z', None)
 
     if not inLimitX:
-      limitHitX = limitHitX + 1
-      if limitHitX > MAX_RESET_COUNT:
-        return # give up
-      else:
-        #sample.moveL(x0, y0, z0, 0,-math.pi/2, 0, rate=rateDefault)
-        return
-        # should do IK check here
+      moveTray('pull')
     elif sample.moveL(x+dx, y+dy, z+dz, 0, -math.pi/2, 0, rate=rateDefault) < 0:
       print "ik error."
       speak('eye kay error.')
