@@ -319,6 +319,8 @@ def moveTray(mode = 'shuffle'):
   sample.lhandOpen(60)
   time.sleep(0.3)
   dzz = conf.pickTrayZ - z1 # TODO 
+  if mode == 'pull' or mode == 'push':
+    dzz += 0.02
   sample.moveRelativeL(dy=-conf.cameraOffsetX, dz=dzz, rate=rate10)
 
   # grasp & do the action
@@ -329,7 +331,9 @@ def moveTray(mode = 'shuffle'):
     yaw1 = -3.1415
   elif math.pi*0.9 < yaw1 < math.pi:
     yaw1 = 3.1415
+
   if mode == 'pull':
+    y1 = 0.05
     sample.moveL(conf.lowerLimitX + conf.pullTrayXFromLimit,y1,z1,roll1,pitch1,yaw1,rate=rate10)
   elif mode == 'shuffle':
     sample.moveL(conf.lowerLimitX + conf.pullTrayXFromLimit,y1,z1,roll1,pitch1,yaw1,rate=rate10)
@@ -337,6 +341,7 @@ def moveTray(mode = 'shuffle'):
     time.sleep(conf.ballShuffleT)
     sample.moveRelativeL(dx=-conf.shuffleTrayDX, dz=-conf.shuffleTrayDZ, rate=rate5)
   elif mode == 'push':
+    y1 = 0.05
     sample.moveL(conf.lowerLimitX + conf.pushTrayXFromLimit,y1,z1,roll1,pitch1,yaw1, rate=rate10)
 
   # open & up & rotate
