@@ -15,18 +15,18 @@ def init(host='localhost'):
         '-ORBInitRef NameService=corbaloc:iiop:'+robotHost+':2809/NameService')
     rtm.initCORBA()
 
-  cvp = rtm.findRTC("CvProcessor0_head")
+  cvp = rtm.findRTC("CvProcessor0")
   print 'cvp = ', cvp
   cvp_svc = OpenHRP.CvProcessorServiceHelper.narrow(cvp.service('service0'))
   cvp.start()
 
-  vs0 = rtm.findRTC("VideoStream0_head")
+  vs0 = rtm.findRTC("VideoStream0")
   print 'vs0 = ', vs0
   vs0_svc = Img.CameraCaptureServiceHelper.narrow(vs0.service('service0'))
   vs0.start()
   rtm.connectPorts(vs0.port("MultiCameraImages"),   cvp.port("MultiCameraImage"))
 
-  vs1 = rtm.findRTC("VideoStream0_hand")
+  vs1 = rtm.findRTC("VideoStream0")
   if vs1 != None:
     vs1_svc = Img.CameraCaptureServiceHelper.narrow(vs1.service('service0'))
     vs1.start()
@@ -40,15 +40,16 @@ def loop():
   lines   = OpenHRP.iarray4SeqHolder()
   while 1:
     vs0_svc.take_one_frame()
-    time.sleep(1)
+    time.sleep(2)
     if 1:
-      cvp_svc.HoughCircles(0, circles)
+      #cvp_svc.HoughCircles(0, circles)
+      cvp_svc.detectFaces(0, circles, False)
     else:
       cvp_svc.HoughLinesP(0, lines)
     if vs1 != None:
       vs1_svc.take_one_frame()
       time.sleep(1)
-      cvp_svc.HoughCircles(ret)
+      cvp_svc.HoughCircles(0, circles)
 
 if __name__ == '__main__' or __name__ == 'main':
   if len(sys.argv) > 1:
