@@ -20,8 +20,8 @@ import bodyinfo
 
 global conf
 
-POSITION_X_LIMIT = 0.375
 FRAME_IDX=0
+NUM_TRY=3
 
 #############################
 #
@@ -35,7 +35,7 @@ rate30 = 30
 rate20 = 20
 rate10 = 10
 rate5  = 5
-rateDefault=rate20
+rateDefault=rate70
 
 #############################
 
@@ -52,7 +52,7 @@ class DemoConfig:
     self.trayHandleZ          = 0.110
     self.gripDepthZ           = 0.044
     self.ballShuffleT         = 3
-    self.trayHandleClearanceX = 0.045
+    self.trayHandleClearanceX = 0.08
     self.searchMovementX      = 0.010	
     self.ballGripAdjX         = 0.003
     self.dropMarginY          = 0.0
@@ -61,8 +61,8 @@ class DemoConfig:
     # the absolute position x to push/pull tray [m]
     self.pullTrayX            = 0.135 #<- based on initial position of moveTray
     self.pushTrayX            = 0.20
-    self.ballClearance        = 0.05
-    self.offsetForSearchBall  = 0.06
+    self.ballClearance        = 0.045
+    self.offsetZForSearchBall = 0.06
 
     # number of pixels
     self.heightView           = 480
@@ -75,9 +75,9 @@ class DemoConfig:
     self.pickBallZ            =-0.015 # 0.030, 0.000
     
     # contol values for 5% and 3% diffence [m]
-    self.controlValueX05      = 0.01
+    self.controlValueX05      = 0.005
     self.controlValueX03      = 0.002
-    self.controlValueY05      = 0.01
+    self.controlValueY05      = 0.005
     self.controlValueY03      = 0.002
     
     # contol value z to search the target
@@ -87,7 +87,7 @@ class DemoConfig:
 
   def update(self, baseOffsetZ):
     self.lowerLimitX          = 0.3
-    self.upperLimitX          = 0.5
+    self.upperLimitX          = 0.45
     self.lowerLimitYL         =-0.05
     self.upperLimitYL         = 0.3
     self.lowerLimitYR         =-self.lowerLimitYL
@@ -253,7 +253,6 @@ def pickBall(dropDy):
   return True
 
 def moveTray(mode = 'shuffle'):
-  global POSITION_X_LIMIT
   # rotate
   sample.moveRelativeL(dy=conf.cameraOffsetX, dw=-math.pi/2, rate=rate40)
   
@@ -455,7 +454,7 @@ def loop(numTry=1):
     # limit motion
     dx,inLimitX = doLimit(x, dx, conf.pullTrayX + conf.trayHandleClearanceX, conf.upperLimitX, 'x', 'ecks')
     dy,inLimitY = doLimit(y, dy, conf.lowerLimitYL, conf.upperLimitYL, 'y', 'wai')
-    dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ + conf.offsetForSearchBall,  conf.upperLimitZ,  'z', None)
+    dz,inLimitZ = doLimit(z, dz, conf.lowerLimitZ + conf.offsetZForSearchBall,  conf.upperLimitZ,  'z', None)
 
     if not inLimitX:
       limitHitX = limitHitX + 1
@@ -620,7 +619,7 @@ if __name__ == '__main__' or __name__ == 'main':
                             []],
                             5)
     moveTray('shuffle')
-    loop(1)   
+    loop(NUM_TRY)   
     moveTray('push')
     speak('finished')
     sample.goOffPose(wait=False)
