@@ -39,7 +39,12 @@ if(NOT QNXNTO)
   set_target_properties(${comp_name} PROPERTIES PREFIX "")
 
   add_executable(${comp_name}Comp ${comp_name}Comp.cpp ${comp_sources})
-  target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} cv cvaux highgui cxcore)
+  if (EXISTS /usr/lib/libcv.so)
+    target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} cv cvaux highgui cxcore)
+  else()
+    target_link_libraries(${comp_name}Comp ${OPENHRP_LIBRARIES} opencv_core opencv_highgui opencv_imgproc opencv_objdetect)
+  endif()
+
   set(target ${comp_name} ${comp_name}Comp)
   
   set(PERMISSIONS_755 OWNER_READ OWNER_WRITE OWNER_EXECUTE  GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
